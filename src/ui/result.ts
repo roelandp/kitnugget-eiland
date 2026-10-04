@@ -3,7 +3,7 @@ import type { ItemId } from '../content/blocks'
 import { goalDone } from '../game/day'
 import { earnsLighthouse } from '../game/island'
 import { addItems, countItems } from '../game/rewards'
-import { lootList, paws, watchInsets } from './common'
+import { growthBar, lootList, paws, watchInsets } from './common'
 import { el } from './dom'
 import type { RoundResult } from './round'
 
@@ -41,6 +41,7 @@ export function resultScreen(app: App, payload?: unknown): Screen {
   if (r.weak.length > 0) {
     parts.push(el('div.section-label', { text: 'Nog even oefenen' }), el('div.wordlist.weak', {}, ...r.weak.map((w) => el('span', { text: w }))))
   }
+  parts.push(growthBar(app))
   if (tired) parts.push(el('p.note', { html: '<strong>Kit Nugget is moe en tevreden. Morgen weer!</strong>' }))
 
   const buttons = el(

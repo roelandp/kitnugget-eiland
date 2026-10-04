@@ -3,7 +3,7 @@ import { makeRng } from '../engine/rng'
 import { emptyState } from '../engine/words'
 import { emptySave, migrate } from '../storage/schema'
 import { dayKey, emptyDays, finishRound, goalDone, isAsleep, roundsToday } from './day'
-import { earnsLighthouse, islandSize, wordsToNextStep } from './island'
+import { earnsLighthouse, growthProgress, islandSize, wordsToNextStep } from './island'
 import { addItems, blocksFor, nextStreak, rewardFor, takeItem } from './rewards'
 
 describe('island growth', () => {
@@ -17,6 +17,14 @@ describe('island growth', () => {
     expect(wordsToNextStep(7)).toBe(3)
     expect(earnsLighthouse(40, 40)).toBe(true)
     expect(earnsLighthouse(39, 40)).toBe(false)
+  })
+
+  it('fills the growth bar with learned words and half for almost learned ones', () => {
+    expect(growthProgress(0, 0)).toEqual({ fill: 0, toGo: 5 })
+    expect(growthProgress(0, 2).fill).toBeCloseTo(0.2)
+    expect(growthProgress(3, 0).fill).toBeCloseTo(0.6)
+    expect(growthProgress(4, 30).fill).toBeLessThan(1)
+    expect(growthProgress(7, 1)).toEqual({ fill: (2 + 0.5) / 5, toGo: 3 })
   })
 })
 

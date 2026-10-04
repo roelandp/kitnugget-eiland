@@ -2,6 +2,7 @@ import type { App } from '../app'
 import { itemInfo, type ItemId } from '../content/blocks'
 import { daysUntil } from '../content'
 import { ROUNDS_PER_DAY, roundsToday } from '../game/day'
+import { growthProgress } from '../game/island'
 import type { Inventory } from '../game/rewards'
 import { speak } from '../audio/speak'
 import { el } from './dom'
@@ -90,6 +91,24 @@ export function lootList(items: { id: ItemId; n: number }[]): HTMLElement {
   }
   if (items.length === 0) wrap.appendChild(el('span', {}, 'Deze keer niks, volgende keer vast wel!'))
   return wrap
+}
+
+/** A bar towards the next strip of land, with what it takes in words. */
+export function growthBar(app: App): HTMLElement {
+  const learned = app.learnedTotal()
+  const almost = app.almostTotal()
+  const { fill, toGo } = growthProgress(learned, almost)
+  const fillEl = el('div.grow-fill')
+  const bar = el(
+    'div.grow',
+    {},
+    el('div.grow-label', {}, el('span', { text: '🏝️' }), el('span', { text: `Nog ${toGo} ${toGo === 1 ? 'woord' : 'woorden'} echt leren, dan groeit het eiland` })),
+    el('div.grow-track', {}, fillEl),
+    almost > 0 ? el('div.grow-sub', { text: `${almost} ${almost === 1 ? 'woord is' : 'woorden zijn'} bijna geleerd. Typ ze nog eens goed op een ander moment!` }) : null,
+  )
+  // Grow into place, so a change after a round is visible.
+  requestAnimationFrame(() => requestAnimationFrame(() => (fillEl.style.width = `${Math.round(fill * 100)}%`)))
+  return bar
 }
 
 export function sleep(ms: number): Promise<void> {

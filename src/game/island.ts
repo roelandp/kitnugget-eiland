@@ -23,6 +23,19 @@ export function sizeForStep(step: number): IslandSize {
   return { w: START_SIZE + Math.ceil(s / 2), d: START_SIZE + Math.floor(s / 2), step: s }
 }
 
+/**
+ * How full the bar towards the next strip of land is. Learned words fill a
+ * fifth each; words that are almost learned fill half of that, so progress
+ * shows from the first rounds. The bar only reaches the end when the strip is
+ * really earned.
+ */
+export function growthProgress(learned: number, almost: number): { fill: number; toGo: number } {
+  const inStep = learned % WORDS_PER_STEP
+  const toGo = WORDS_PER_STEP - inStep
+  const fill = Math.min(0.95, (inStep + 0.5 * Math.min(almost, toGo)) / WORDS_PER_STEP)
+  return { fill, toGo }
+}
+
 /** Words to go until the next growth step. */
 export function wordsToNextStep(learned: number): number {
   return WORDS_PER_STEP - (learned % WORDS_PER_STEP)

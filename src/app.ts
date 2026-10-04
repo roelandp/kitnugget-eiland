@@ -257,6 +257,16 @@ export class App {
     return n
   }
 
+  /** Words over every test that are almost learned (the 'bijna' status). */
+  almostTotal(): number {
+    let n = 0
+    for (const t of TOETSEN) {
+      const words = this.store.profile.words[t.id] ?? {}
+      for (const q of t.questions) if (words[q.word] && statusOf(words[q.word]) === 'bijna') n++
+    }
+    return n
+  }
+
   learnedIn(toets = this.toets): number {
     const words = this.store.profile.words[toets.id] ?? {}
     return toets.questions.filter((q) => words[q.word] && statusOf(words[q.word]) === 'geleerd').length
