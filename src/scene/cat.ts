@@ -36,6 +36,8 @@ export interface CatAvatar {
   setImage?(pose: CatPose, source: HTMLCanvasElement | null, inset?: ImageInset): void
   /** 3D avatars: hats and accessories as a camera-facing picture on the head (see ACCESSORY_* in dressup). */
   setAccessories?(canvas: HTMLCanvasElement | null): void
+  /** 3D avatars: a little friend riding on the back (null takes it off). */
+  attachRider?(obj: THREE.Object3D | null): void
 }
 
 /** Accessory canvas layout, shared with dressup.ts: the head top sits at (0.5, ANCHOR_Y), the head is HEAD_W wide. */
@@ -408,7 +410,25 @@ abstract class Cat3D implements CatAvatar {
   protected headTop = new THREE.Vector3(0, 0.95, 0.12)
   /** Head width in world units, for sizing hats. */
   protected headWidth = 0.42
+  /** Middle of the back, where a rider sits, in poseGroup space. */
+  protected backTop = new THREE.Vector3(0, 0.62, -0.12)
   private accessory: THREE.Sprite | null = null
+  private rider: THREE.Object3D | null = null
+
+  attachRider(obj: THREE.Object3D | null): void {
+    this.rider?.removeFromParent()
+    this.rider = obj
+    if (!obj) return
+    obj.position.copy(this.backTop)
+    this.poseGroup.add(obj)
+  }
+
+  /** The rider bobs along with every step. */
+  protected updateRider(t: number): void {
+    if (!this.rider) return
+    this.rider.position.set(this.backTop.x, this.backTop.y + 0.012 * Math.sin(t * 3.1), this.backTop.z)
+    this.rider.rotation.z = 0.05 * Math.sin(t * 1.7)
+  }
 
   constructor() {
     this.object.name = 'kit-nugget'
@@ -746,6 +766,23 @@ class GlbCat extends Cat3D {
     }
     this.headTop.set(c.x, maxY * 0.9, c.z)
     this.headWidth = Math.max(0.25, Math.min(0.6, (maxX - minX) * 0.9))
+
+    // The back: the highest points on the half away from the head, a bit behind the middle.
+    let minZ = Infinity
+    let maxZ = -Infinity
+    for (const p of pts) {
+      minZ = Math.min(minZ, p.z)
+      maxZ = Math.max(maxZ, p.z)
+    }
+    const midZ = (minZ + maxZ) / 2
+    const depth = Math.max(0.01, maxZ - minZ)
+    const away = c.z >= midZ ? -1 : 1
+    const backZ = midZ + away * depth * 0.12
+    const strip = pts.filter((p) => Math.abs(p.z - backZ) < depth * 0.1 && Math.abs(p.x - c.x) < 0.12)
+    if (strip.length) {
+      const top = strip.reduce((m, p) => Math.max(m, p.y), -Infinity)
+      this.backTop.set(c.x, top - 0.005, backZ)
+    }
   }
 
   private play(names: string[]): void {
@@ -772,6 +809,7 @@ class GlbCat extends Cat3D {
     this.updatePose(dt, t)
     this.mixer?.update(dt)
     this.updateAccessory()
+    this.updateRider(t)
   }
 
   dispose(): void {

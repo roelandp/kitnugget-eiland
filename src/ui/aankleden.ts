@@ -1,5 +1,5 @@
 import type { App, Screen } from '../app'
-import { CAPES, HATS, PATTERNS, lockedText, unlocked, type Look, type Unlock } from '../content/looks'
+import { CAPES, HATS, PATTERNS, RIDERS, lockedText, unlocked, type Look, type Unlock } from '../content/looks'
 import { el } from './dom'
 
 /** Dress Kit Nugget up with what he earned: hats, a cape and a fur pattern. */
@@ -42,6 +42,20 @@ export function aankledenScreen(app: App): Screen {
           save()
         }),
       ))),
+      app.is3d
+        ? el('div.card.panel', {}, el('h2', { text: 'Vriendjes' }), el('div.dress-row', {},
+            chip('Alleen', !look.rider, { kind: 'rounds', at: 0 }, () => {
+              look = { ...look, rider: null }
+              save()
+            }),
+            ...RIDERS.map((r) =>
+              chip(r.naam, look.rider === r.id, r.unlock, () => {
+                look = { ...look, rider: r.id }
+                save()
+              }),
+            ),
+          ))
+        : null,
       app.is3d ? null : el('div.card.panel', {}, el('h2', { text: 'Cape' }), el('div.dress-row', {},
         chip('Geen', look.cape === null, { kind: 'rounds', at: 0 }, () => {
           look = { ...look, cape: null }

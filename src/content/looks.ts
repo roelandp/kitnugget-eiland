@@ -4,9 +4,24 @@ export interface Look {
   hats: string[]
   cape: string | null
   pattern: string | null
+  /** A friend riding on the back (3D Kit Nugget only). */
+  rider?: string | null
 }
 
-export const EMPTY_LOOK: Look = { hats: [], pattern: null, cape: null }
+export const EMPTY_LOOK: Look = { hats: [], pattern: null, cape: null, rider: null }
+
+export interface Rider {
+  id: string
+  naam: string
+  unlock: { kind: 'learned' | 'rounds' | 'days' | 'fed'; at: number }
+}
+
+/** Friends who can ride along on Kit Nugget's back. */
+export const RIDERS: Rider[] = [{ id: 'uil', naam: 'Uilie op je rug', unlock: { kind: 'rounds', at: 1 } }]
+
+export function riderById(id: string | null | undefined): Rider | undefined {
+  return id ? RIDERS.find((r) => r.id === id) : undefined
+}
 
 /** How far Viggo got; every unlock is earned by playing, never bought. */
 export interface LookProgress {
@@ -120,9 +135,11 @@ export function sanitiseLook(look: Look, p: LookProgress): Look {
   })
   const cape = capeById(look.cape)
   const pattern = patternById(look.pattern)
+  const rider = riderById(look.rider)
   return {
     hats,
     cape: cape && unlocked(cape.unlock, p) ? cape.id : null,
     pattern: pattern && unlocked(pattern.unlock, p) ? pattern.id : null,
+    rider: rider && unlocked(rider.unlock, p) ? rider.id : null,
   }
 }

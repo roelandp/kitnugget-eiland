@@ -81,8 +81,9 @@ export class CatDresser {
   }
 
   setLook(look: Look): void {
-    if (JSON.stringify(look) === JSON.stringify(this.current)) return
-    this.current = { hats: [...look.hats], pattern: look.pattern, cape: look.cape }
+    const next = { hats: [...look.hats], pattern: look.pattern, cape: look.cape }
+    if (JSON.stringify(next) === JSON.stringify(this.current)) return
+    this.current = next
     this.invalidate()
   }
 

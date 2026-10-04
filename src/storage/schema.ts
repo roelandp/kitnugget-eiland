@@ -47,6 +47,8 @@ export interface Look {
   hats: string[]
   pattern: string | null
   cape: string | null
+  /** A friend riding on Kit Nugget's back, e.g. 'uil' for Uilie. */
+  rider?: string | null
 }
 
 export interface Profile {
@@ -133,6 +135,7 @@ function migrateProfile(raw: unknown): Profile {
     hats: Array.isArray(look.hats) ? look.hats.filter((x): x is string => typeof x === 'string') : [],
     pattern: typeof look.pattern === 'string' ? look.pattern : null,
     cape: typeof look.cape === 'string' ? look.cape : null,
+    rider: typeof look.rider === 'string' ? look.rider : null,
   }
 
   const days = obj(v.days)

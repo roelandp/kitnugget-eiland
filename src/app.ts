@@ -85,6 +85,8 @@ export class App {
   lastWord: string | null = null
   /** Kit Nugget was sent somewhere by Viggo: no wandering off on his own until then. */
   catHoldUntil = 0
+  /** Who rides on Kit Nugget's back right now. */
+  private riding: string | null = null
   /** Set when a new version is waiting; applied on the start screen, never mid-round. */
   private pendingUpdate: (() => void) | null = null
 
@@ -336,6 +338,8 @@ export class App {
     // The 3D Kit Nugget wears hats only; capes and fur patterns are painted on the picture version.
     if (this.is3d) look = { ...look, cape: null, pattern: null }
     this.dresser.setLook(look)
+    this.riding = this.is3d ? (look.rider ?? null) : null
+    ;(this.scene as unknown as { setRider?: (id: string | null) => Promise<void> }).setRider?.(this.riding)
     this.pushLook()
   }
 
@@ -369,7 +373,8 @@ export class App {
   }
 
   nextAnimal(): AnimalId {
-    const options = ANIMAL_IDS.filter((a) => a !== this.lastAnimal)
+    // A friend riding on Kit Nugget's back does not also come visiting.
+    const options = ANIMAL_IDS.filter((a) => a !== this.lastAnimal && a !== this.riding)
     const pick = options[Math.floor(Math.random() * options.length)]
     this.lastAnimal = pick
     return pick

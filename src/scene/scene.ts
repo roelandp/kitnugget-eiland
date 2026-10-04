@@ -120,6 +120,8 @@ export class IslandScene {
   private catMoving = false
   private catSeq = 0
   private walkSeq = 0
+  private riderSeq = 0
+  private rider: { model: THREE.Object3D; glb: boolean } | null = null
   private pendingPose: CatPose = 'idle'
   private bangT = -1
 
@@ -516,6 +518,29 @@ export class IslandScene {
   /** Dress-up: replace the sprite art of one pose (sprite avatar only; no-op otherwise). */
   setCatImage(pose: CatPose, source: HTMLCanvasElement | null, inset?: ImageInset): void {
     this.cat?.setImage?.(pose, source, inset)
+  }
+
+  /** A friend riding on Kit Nugget's back (3D avatars), or null to take it off. */
+  async setRider(id: AnimalId | null): Promise<void> {
+    await this.ready
+    const seq = ++this.riderSeq
+    if (!id) {
+      this.cat?.attachRider?.(null)
+      this.rider = null
+      return
+    }
+    const gltf = this.hasModel(id) ? await loadOptionalGlb(`${this.base}models/${id}.glb`) : null
+    if (seq !== this.riderSeq || this.disposed) return
+    const model = gltf ? normalizeModel(gltf.scene, 0.55) : buildAnimal(id)
+    if (!gltf) model.scale.setScalar(0.65)
+    model.traverse((o) => {
+      if ((o as THREE.Mesh).isMesh) o.castShadow = true
+    })
+    const holder = new THREE.Group()
+    holder.name = `rider-${id}`
+    holder.add(model)
+    this.cat?.attachRider?.(holder)
+    this.rider = { model, glb: !!gltf }
   }
 
   async animalArrives(id: AnimalId): Promise<void> {
@@ -1125,6 +1150,10 @@ export class IslandScene {
     }
     this.catRoot.position.set(this.catPos.x, this.catBaseY + this.catHop, this.catPos.z)
     this.cat?.update(dt, t)
+    if (this.rider) {
+      if (this.rider.glb) animateWhole(this.rider.model, 'idle', t)
+      else animateAnimal(this.rider.model as THREE.Group, 'idle', t, dt)
+    }
     const ground = this.catMoving ? this.catBaseY : this.surfaceAt(this.catTile.x, this.catTile.z)
     const lift = Math.max(0, this.catRoot.position.y - ground)
     const bs = 0.62 * (1 - Math.min(0.5, lift * 0.8))
@@ -1308,26 +1337,32 @@ function tilePath(x0: number, z0: number, x1: number, z1: number): { x: number; 
 /** Whole-model animation for GLB animals (no known rig). */
 function animateWhole(model: THREE.Object3D, state: AnimalState, t: number): void {
   const inner = model.children[0] ?? model
-  inner.position.set(0, 0, 0)
+  // The inner model carries the normalising scale and centring offset: animate on top of those.
+  let base = inner.userData.base as { pos: THREE.Vector3; scale: THREE.Vector3 } | undefined
+  if (!base) {
+    base = { pos: inner.position.clone(), scale: inner.scale.clone() }
+    inner.userData.base = base
+  }
+  inner.position.copy(base.pos)
   inner.rotation.set(0, 0, 0)
-  inner.scale.set(1, 1, 1)
+  inner.scale.copy(base.scale)
   switch (state) {
     case 'idle':
-      inner.scale.y = 1 + 0.025 * Math.sin(t * 2.4)
+      inner.scale.y = base.scale.y * (1 + 0.025 * Math.sin(t * 2.4))
       break
     case 'talk':
-      inner.position.y = 0.03 * Math.abs(Math.sin(t * 6))
+      inner.position.y = base.pos.y + 0.03 * Math.abs(Math.sin(t * 6))
       inner.rotation.z = 0.05 * Math.sin(t * 3)
       break
     case 'happy':
-      inner.position.y = 0.12 * Math.abs(Math.sin(t * 6))
+      inner.position.y = base.pos.y + 0.12 * Math.abs(Math.sin(t * 6))
       inner.rotation.y = 0.2 * Math.sin(t * 6)
       break
     case 'swim':
       inner.rotation.z = 0.08 * Math.sin(t * 2.5)
       break
     case 'fly':
-      inner.position.y = 0.05 * Math.sin(t * 9)
+      inner.position.y = base.pos.y + 0.05 * Math.sin(t * 9)
       inner.rotation.z = 0.12 * Math.sin(t * 4.5)
       break
     case 'walk':
