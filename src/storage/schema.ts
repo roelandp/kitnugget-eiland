@@ -29,6 +29,8 @@ export interface PlacedBlock {
   z: number
   y: number
   type: ItemId
+  /** Quarter turns, for furniture. */
+  rot?: number
 }
 
 export interface Island {
@@ -102,7 +104,12 @@ function migrateProfile(raw: unknown): Profile {
     p.island.blocks = island.blocks
       .map((b) => obj(b))
       .filter((b) => typeof b.type === 'string' && ITEM_IDS.has(b.type))
-      .map((b) => ({ x: Math.round(num(b.x, 0)), z: Math.round(num(b.z, 0)), y: Math.max(0, Math.round(num(b.y, 0))), type: b.type as ItemId }))
+      .map((b) => {
+        const out: PlacedBlock = { x: Math.round(num(b.x, 0)), z: Math.round(num(b.z, 0)), y: Math.max(0, Math.round(num(b.y, 0))), type: b.type as ItemId }
+        const rot = Math.round(num(b.rot, 0)) % 4
+        if (rot > 0) out.rot = rot
+        return out
+      })
   }
   p.island.seenStep = num(island.seenStep, 0)
   if (Array.isArray(island.lighthouses)) p.island.lighthouses = island.lighthouses.filter((x): x is string => typeof x === 'string')

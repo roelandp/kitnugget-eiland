@@ -7,6 +7,7 @@ import { IslandScene, type BlockType } from './scene/scene'
 import { WordEngine } from './engine/engine'
 import { statusOf } from './engine/words'
 import { islandSize, sizeForStep } from './game/island'
+import { turnTop } from './game/build'
 import { Store } from './storage/store'
 import { CatDresser, POSE_SPRITE } from './scene/dressup'
 import { sanitiseLook, type LookProgress } from './content/looks'
@@ -287,7 +288,7 @@ export class App {
   pushPlaced(): void {
     const placed = this.store.profile.island.blocks
     const blocks = placed.filter((b) => itemInfo(b.type)?.kind === 'block').map((b) => ({ x: b.x, z: b.z, y: b.y, type: b.type as BlockType }))
-    const props = placed.filter((b) => itemInfo(b.type)?.kind === 'furniture').map((b) => ({ x: b.x, z: b.z, y: b.y, type: b.type }))
+    const props = placed.filter((b) => itemInfo(b.type)?.kind === 'furniture').map((b) => ({ x: b.x, z: b.z, y: b.y, type: b.type, rot: b.rot ?? 0 }))
     this.scene.setBlocks(blocks)
     this.scene.setProps(props)
   }
@@ -327,6 +328,18 @@ export class App {
       const d = this.dresser.dressed(sprite)
       if (d) set.call(this.scene, pose, d.canvas, d.inset)
     }
+  }
+
+  /** Turns the furniture on top of a tile a quarter. Returns false when there is none. */
+  turnFurnitureAt(x: number, z: number): boolean {
+    const turned = turnTop(this.store.profile.island.blocks, x, z)
+    if (!turned) return false
+    this.store.update((p) => {
+      p.island.blocks = turned
+    })
+    this.audio.play('place')
+    this.pushPlaced()
+    return true
   }
 
   nextAnimal(): AnimalId {

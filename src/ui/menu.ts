@@ -91,7 +91,10 @@ export function menuScreen(app: App): Screen {
   const unwatch = watchInsets(app, top, sheet)
   const mover = catMover(app, root)
   const offTap = onStageTap(app, (x, y) => {
-    if (awake) mover.tap(x, y)
+    if (!awake || mover.tap(x, y)) return
+    // A tap on furniture turns it a quarter.
+    const spot = app.scene.pick(x, y)
+    if (spot) app.turnFurnitureAt(spot.x, spot.z)
   })
   let disposed = false
   let wakeTimer = 0

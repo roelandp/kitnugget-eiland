@@ -54,6 +54,14 @@ export function removeTop(blocks: PlacedBlock[], x: number, z: number): { blocks
   return { blocks: blocks.filter((b) => b !== top), removed: top.type }
 }
 
+/** Turns the furniture on top of a tile a quarter; null when the top is not furniture. */
+export function turnTop(blocks: PlacedBlock[], x: number, z: number): PlacedBlock[] | null {
+  const col = column(blocks, x, z)
+  const top = col[col.length - 1]
+  if (!top || itemInfo(top.type)?.kind !== 'furniture') return null
+  return blocks.map((b) => (b === top ? { ...b, rot: ((b.rot ?? 0) + 1) % 4 } : b))
+}
+
 /** Placed furniture of a type, for Kit Nugget's little routines. */
 export function findItem(blocks: PlacedBlock[], type: ItemId): PlacedBlock | undefined {
   return blocks.find((b) => b.type === type)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { canPlace, height, place, removeTop } from './build'
+import { canPlace, height, place, removeTop, turnTop } from './build'
 
 const bounds = { minX: -2, minZ: -2, w: 4, d: 4 }
 
@@ -13,6 +13,16 @@ describe('building', () => {
     expect(r.removed).toBe('steen')
     expect(height(r.blocks, 0, 0)).toBe(1)
     expect(removeTop([], 1, 1)).toBeNull()
+  })
+
+  it('turns furniture a quarter per tap, but not blocks', () => {
+    let b = place([], bounds, 0, 0, 'bankje')!
+    for (let i = 1; i <= 4; i++) {
+      b = turnTop(b, 0, 0)!
+      expect(b[0].rot).toBe(i % 4)
+    }
+    expect(turnTop(place([], bounds, 0, 0, 'gras')!, 0, 0)).toBeNull()
+    expect(turnTop([], 1, 1)).toBeNull()
   })
 
   it('refuses outside the island, on furniture, on water and too high', () => {

@@ -88,7 +88,7 @@ export function bouwenScreen(app: App): Screen {
     if (owned.length === 0 && fish === 0) {
       hint.textContent = 'Je hebt nog geen blokken. Speel een ronde om blokken te verdienen!'
     } else if (!tool) {
-      hint.textContent = 'Kies een blok en tik op het eiland. Veeg om te draaien. Tik op Kit Nugget om hem te verplaatsen.'
+      hint.textContent = 'Kies een blok en tik op het eiland. Tik op een meubel om het te draaien, op Kit Nugget om hem te verplaatsen.'
     } else if (tool === 'gum') {
       hint.textContent = 'Tik op een blok om het weg te halen.'
     } else {
@@ -105,7 +105,10 @@ export function bouwenScreen(app: App): Screen {
   function tapAt(clientX: number, clientY: number): void {
     if (!tool) {
       // No block chosen: tap Kit Nugget, then a tile, and he walks there.
-      mover.tap(clientX, clientY)
+      // A tap on a piece of furniture turns it a quarter.
+      if (mover.tap(clientX, clientY)) return
+      const spot = app.scene.pick(clientX, clientY)
+      if (spot) app.turnFurnitureAt(spot.x, spot.z)
       return
     }
     const hit = app.scene.pick(clientX, clientY)
@@ -125,6 +128,8 @@ export function bouwenScreen(app: App): Screen {
       return
     }
     const err = canPlace(p.island.blocks, tiles, hit.x, hit.z, tool)
+    // Tapping furniture turns it, whatever is selected.
+    if (err === 'bovenop-meubel' && app.turnFurnitureAt(hit.x, hit.z)) return
     if (err) {
       app.toast(ERRORS[err])
       return

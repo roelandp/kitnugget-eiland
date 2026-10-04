@@ -325,13 +325,15 @@ function buildRaw(type: string): THREE.Group {
   return g
 }
 
-const pkey = (p: PlacedProp): string => `${p.type}@${p.x},${p.y},${p.z},${p.rot ?? 0}`
+const pkey = (p: PlacedProp): string => `${p.type}@${p.x},${p.y},${p.z}`
 
 interface PropEntry {
   key: string
   prop: PlacedProp
   obj: THREE.Group
   pop: number
+  /** Quarter turns counted up, so turning 3 -> 0 keeps spinning forward. */
+  turns: number
 }
 
 export class PropLayer {
@@ -355,7 +357,12 @@ export class PropLayer {
         obj.position.set(p.x + 0.5, p.y, p.z + 0.5)
         obj.rotation.y = ((p.rot ?? 0) * Math.PI) / 2
         this.group.add(obj)
-        e = { key: k, prop: { ...p }, obj, pop: firstFill ? -1e9 : now }
+        const turns = p.rot ?? 0
+        e = { key: k, prop: { ...p }, obj, pop: firstFill ? -1e9 : now, turns }
+      } else if ((e.prop.rot ?? 0) !== (p.rot ?? 0)) {
+        // Turned by a tap: count the quarter turns forward.
+        e.turns += ((((p.rot ?? 0) - (e.prop.rot ?? 0)) % 4) + 4) % 4
+        e.prop = { ...p }
       }
       next.set(k, e)
     }
@@ -383,6 +390,9 @@ export class PropLayer {
       const k = clamp01((t - e.pop) / POP_DUR)
       const s = k >= 1 ? 1 : 0.3 + 0.7 * easeOutBack(k, 2.4)
       e.obj.scale.setScalar(s)
+      const targetRot = (e.turns * Math.PI) / 2
+      const dr = targetRot - e.obj.rotation.y
+      e.obj.rotation.y = Math.abs(dr) < 0.002 ? targetRot : e.obj.rotation.y + dr * 0.22
       const beam = e.obj.userData.beam as THREE.Object3D | undefined
       if (beam) {
         beam.rotation.y = t * 0.8
