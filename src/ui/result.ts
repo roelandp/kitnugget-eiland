@@ -3,6 +3,7 @@ import type { ItemId } from '../content/blocks'
 import { goalDone } from '../game/day'
 import { earnsLighthouse } from '../game/island'
 import { addItems, countItems } from '../game/rewards'
+import { clock } from '../game/buildtime'
 import { growthBar, lootList, paws, watchInsets } from './common'
 import { el } from './dom'
 import type { RoundResult } from './round'
@@ -34,6 +35,7 @@ export function resultScreen(app: App, payload?: unknown): Screen {
     el('p.note', { html: `<strong>${r.right} van de ${r.total}</strong> goed &nbsp; ${paws(app).outerHTML}` }),
     el('div.section-label', { text: 'Verdiend' }),
     lootList(countItems(r.earned as ItemId[])),
+    el('p.note', { html: app.buildUnlimited() ? '<strong>Alle woorden geleerd: bouwen mag zo lang je wilt!</strong>' : `⏳ <strong>+${clock(r.seconds ?? 0)}</strong> bouwtijd. Je hebt nu <strong>${clock(app.store.profile.buildTime)}</strong> om te bouwen.` }),
   ]
   if (r.learned.length > 0) {
     parts.push(el('div.section-label', { text: 'Nieuw geleerd' }), el('div.wordlist', {}, ...r.learned.map((w) => el('span', { text: w }))))

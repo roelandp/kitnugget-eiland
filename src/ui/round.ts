@@ -9,6 +9,7 @@ import { diffMarks, gapForm, letterHint, splitArticle } from '../engine/text'
 import type { Outcome } from '../engine/words'
 import { finishRound } from '../game/day'
 import { addItems, nextStreak, rewardFor } from '../game/rewards'
+import { EXTENSION_SECONDS, LEARNED_BONUS, UNLOCK_RIGHT, addTime, clock, nextRun, secondsFor } from '../game/buildtime'
 import { inventoryChip, sleep, speakButton, updateInventoryChip, watchInsets } from './common'
 import { el } from './dom'
 
@@ -16,6 +17,8 @@ export const ROUND_LENGTH = 12
 
 export interface RoundResult {
   earned: ItemId[]
+  /** Build time earned this round, in seconds. */
+  seconds: number
   learned: string[]
   weak: string[]
   right: number
@@ -59,7 +62,14 @@ const ALMOST_TEXT: Record<AlmostReason, string> = {
   typo: 'Bijna goed! Er is één letter anders.',
 }
 
-export function roundScreen(app: App): Screen {
+/** `{ unlock: true }`: a short round of 5 right answers that unlocks building again. */
+export interface RoundOptions {
+  unlock?: boolean
+}
+
+export function roundScreen(app: App, payload?: unknown): Screen {
+  const unlock = Boolean((payload as RoundOptions | undefined)?.unlock)
+  const length = unlock ? UNLOCK_RIGHT : ROUND_LENGTH
   const engine = app.makeEngine()
   engine.avoid(app.lastWord)
   const rng = makeRng(Date.now() & 0x7fffffff)
@@ -68,6 +78,9 @@ export function roundScreen(app: App): Screen {
   const asked = new Set<string>()
   let index = 0
   let right = 0
+  let seconds = 0
+  /** Unlock round: right answers in a row. */
+  let run = 0
   let streak = 0
   let disposed = false
   let leaving: Promise<void> = Promise.resolve()
@@ -76,7 +89,7 @@ export function roundScreen(app: App): Screen {
   app.scene.catPose('idle')
 
   const dots = el('div.progress')
-  for (let i = 0; i < ROUND_LENGTH; i++) dots.appendChild(el('i'))
+  for (let i = 0; i < length; i++) dots.appendChild(el('i'))
   const streakChip = el('div.chip.hidden')
   const invChip = inventoryChip(app.store.profile.inventory)
   const top = el(
@@ -94,7 +107,9 @@ export function roundScreen(app: App): Screen {
 
   function updateTop(): void {
     ;[...dots.children].forEach((d, i) => {
-      d.className = i < index ? 'done' : i === index ? 'now' : ''
+      // The unlock round counts right answers, a normal round counts questions.
+      const at = unlock ? run : index
+      d.className = i < at ? 'done' : i === at ? 'now' : ''
     })
     streakChip.classList.toggle('hidden', streak < 2)
     streakChip.textContent = `⭐ ${streak} op een rij`
@@ -107,14 +122,23 @@ export function roundScreen(app: App): Screen {
     asked.add(q.word)
     if (after === 'geleerd' && before !== 'geleerd' && !learned.includes(q.word)) learned.push(q.word)
     if (outcome === 'correct' || outcome === 'hint') right++
+    if (unlock) {
+      const before = run
+      run = nextRun(run, outcome)
+      if (before > 0 && run === 0) app.toast('Oeps, nog een keer! 5 goed op een rij en je mag weer bouwen.')
+    }
     streak = nextStreak(streak, outcome)
     const items = rewardFor(type, outcome, streak, rng)
     earned.push(...items)
+    // The unlock round pays a fixed extension at the end instead of time per answer.
+    const time = unlock ? 0 : secondsFor(outcome) + (learned.includes(q.word) && after === 'geleerd' && before !== 'geleerd' ? LEARNED_BONUS : 0)
+    seconds += time
     app.saveEngine(engine)
     app.lastWord = q.word
     app.store.update((p) => {
       p.inventory = addItems(p.inventory, items)
       p.stats.answers++
+      p.buildTime = addTime(p.buildTime, time)
     })
     return items
   }
@@ -138,23 +162,35 @@ export function roundScreen(app: App): Screen {
   }
 
   function finish(): void {
+    if (unlock) {
+      // Back to building straight away; this short round is not a daily round.
+      app.store.update((p) => {
+        p.buildTime = Math.max(p.buildTime, EXTENSION_SECONDS)
+        p.extensionUsed = true
+      })
+      app.toast(`Goed zo! Je mag nog ${clock(EXTENSION_SECONDS)} bouwen.`)
+      app.go('bouwen')
+      return
+    }
     app.store.update((p) => {
+      p.extensionUsed = false
       p.days = finishRound(p.days, Date.now())
       p.stats.rounds++
     })
     const result: RoundResult = {
       earned,
+      seconds,
       learned,
       weak: engine.weakest(3, [...asked]).map((q) => q.word),
       right,
-      total: ROUND_LENGTH,
+      total: length,
     }
     app.go('result', result)
   }
 
   async function next(): Promise<void> {
     if (disposed) return
-    if (index >= ROUND_LENGTH) {
+    if (unlock ? run >= length : index >= length) {
       finish()
       return
     }
@@ -411,6 +447,7 @@ export function roundScreen(app: App): Screen {
     return wrap
   }
 
+  if (unlock) window.setTimeout(() => !disposed && app.toast(`Doe ${UNLOCK_RIGHT} woorden goed op een rij, dan mag je weer bouwen!`), 400)
   void next()
 
   return {

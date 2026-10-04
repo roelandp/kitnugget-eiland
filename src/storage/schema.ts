@@ -1,6 +1,7 @@
 import type { ItemId } from '../content/blocks'
 import { ITEMS } from '../content/blocks'
 import { emptyDays, type Days } from '../game/day'
+import { CAP_SECONDS, START_SECONDS } from '../game/buildtime'
 import type { Inventory } from '../game/rewards'
 import { reviveState, type WordState } from '../engine/words'
 
@@ -59,6 +60,10 @@ export interface Profile {
   tests: TestResult[]
   settings: Settings
   stats: { rounds: number; fed: number; answers: number }
+  /** Seconds of building left, earned by answering. */
+  buildTime: number
+  /** The one-off extension (5 right in a row) was used; a full round frees it again. */
+  extensionUsed: boolean
 }
 
 export interface SaveFile {
@@ -78,6 +83,8 @@ export function emptyProfile(naam = 'Viggo'): Profile {
     tests: [],
     settings: { toets: null, sound: true, speak: true },
     stats: { rounds: 0, fed: 0, answers: 0 },
+    buildTime: START_SECONDS,
+    extensionUsed: false,
   }
 }
 
@@ -156,6 +163,8 @@ function migrateProfile(raw: unknown): Profile {
   }
   const stats = obj(v.stats)
   p.stats = { rounds: num(stats.rounds, 0), fed: num(stats.fed, 0), answers: num(stats.answers, 0) }
+  p.buildTime = Math.max(0, Math.min(CAP_SECONDS, num(v.buildTime, START_SECONDS)))
+  p.extensionUsed = v.extensionUsed === true
   return p
 }
 

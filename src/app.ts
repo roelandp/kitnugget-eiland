@@ -8,6 +8,7 @@ import { WordEngine } from './engine/engine'
 import { statusOf } from './engine/words'
 import { islandSize, sizeForStep } from './game/island'
 import { turnTop } from './game/build'
+import { unlimited } from './game/buildtime'
 import { Store } from './storage/store'
 import { CatDresser, POSE_SPRITE } from './scene/dressup'
 import { sanitiseLook, type LookProgress } from './content/looks'
@@ -255,6 +256,11 @@ export class App {
       for (const q of t.questions) if (words[q.word] && statusOf(words[q.word]) === 'geleerd') n++
     }
     return n
+  }
+
+  /** Every word of the active test learned: building has no time limit any more. */
+  buildUnlimited(): boolean {
+    return unlimited(this.learnedIn(), this.toets.questions.length)
   }
 
   /** Words over every test that are almost learned (the 'bijna' status). */

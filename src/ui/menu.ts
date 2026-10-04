@@ -2,6 +2,7 @@ import type { App, Screen } from '../app'
 import { TOETSEN, daysUntil, formatDate } from '../content'
 import { goalDone, isAsleep, roundsToday } from '../game/day'
 import { growthBar, inventoryChip, paws, testCountdown, watchInsets } from './common'
+import { clock } from '../game/buildtime'
 import { el } from './dom'
 import { startRoaming } from './roam'
 import { catMover, onStageTap } from './move'
@@ -57,7 +58,7 @@ export function menuScreen(app: App): Screen {
     'div.menu-panel',
     {},
     el('button.btn.primary', { onclick: () => start() }, '▶  Spelen'),
-    el('button.btn', { onclick: () => app.go('bouwen') }, '🧱 Bouwen'),
+    el('button.btn', { onclick: () => app.go('bouwen') }, '🧱 Bouwen', app.buildUnlimited() ? null : el('span.time-badge', { text: clock(p.buildTime) })),
     el('button.btn', { onclick: () => app.go('toets') }, '📝 Proeftoets'),
     el('button.btn', { onclick: () => app.go('kaart') }, '🗺️ Woordenkaart'),
     el('button.btn', { onclick: () => app.go('aankleden') }, '👒 Aankleden'),

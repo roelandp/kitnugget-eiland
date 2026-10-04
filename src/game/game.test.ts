@@ -99,3 +99,21 @@ describe('storage', () => {
     expect(back.profiles.viggo.island.blocks).toHaveLength(1)
   })
 })
+
+describe('build time', () => {
+  it('is earned by answering, capped at 5 minutes, and unlocks with 5 right in a row', async () => {
+    const bt = await import('./buildtime')
+    expect(bt.secondsFor('correct')).toBe(20)
+    expect(bt.secondsFor('almost')).toBe(10)
+    expect(bt.secondsFor('wrong')).toBe(0)
+    expect(bt.addTime(290, 60)).toBe(300)
+    expect(bt.spendTime(3, 10)).toBe(0)
+    expect(bt.clock(125)).toBe('2:05')
+    let run = 0
+    for (const o of ['correct', 'correct', 'almost', 'correct'] as const) run = bt.nextRun(run, o)
+    expect(run).toBe(3)
+    expect(bt.nextRun(run, 'wrong')).toBe(0)
+    expect(bt.unlimited(40, 40)).toBe(true)
+    expect(bt.unlimited(39, 40)).toBe(false)
+  })
+})

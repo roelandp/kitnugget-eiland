@@ -3,6 +3,7 @@ import type { Question } from '../content/types'
 import { checkTyped } from '../engine/answer'
 import { makeRng } from '../engine/rng'
 import { addItems, rewardFor } from '../game/rewards'
+import { addTime, clock, secondsFor } from '../game/buildtime'
 import type { TestResult } from '../storage/schema'
 import { speakButton } from './common'
 import { el } from './dom'
@@ -134,9 +135,12 @@ export function toetsScreen(app: App): Screen {
       grade: g,
       wrong: answers.filter((a) => !a.ok).map((a) => ({ word: a.q.word, answer: a.answer })),
     }
+    const seconds = correct * secondsFor('correct')
     app.store.update((p) => {
       p.inventory = addItems(p.inventory, items)
       p.tests = [...p.tests, result].slice(-10)
+      p.buildTime = addTime(p.buildTime, seconds)
+      p.extensionUsed = false
     })
     app.audio.play('roundEnd')
     const lighthouse = checkLighthouse(app)
@@ -147,7 +151,7 @@ export function toetsScreen(app: App): Screen {
         {},
         el('h2', { text: 'Jouw cijfer' }),
         el('div.grade', { text: gradeText(g) }),
-        el('p.note', { html: `<strong>${correct} van de ${answers.length}</strong> goed gespeld. Je verdient ${items.length} ${items.length === 1 ? 'blok' : 'blokken'}.` }),
+        el('p.note', { html: `<strong>${correct} van de ${answers.length}</strong> goed gespeld. Je verdient ${items.length} ${items.length === 1 ? 'blok' : 'blokken'} en ${clock(seconds)} bouwtijd.` }),
         lighthouse ? el('p.note', { html: '<strong>Alle woorden geleerd! Er staat een vuurtorentje voor je klaar.</strong>' }) : null,
         wrong.length > 0
           ? el(

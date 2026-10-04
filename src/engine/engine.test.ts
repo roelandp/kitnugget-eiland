@@ -261,8 +261,10 @@ describe('WordEngine', () => {
       else if (i < 28) states[q.word] = { ...emptyState(), seen: 2, box: 2, dueAt: start - 1000, lastSeen: start - DAY }
     })
     const counts = { due: 0, new: 0, known: 0, retry: 0, fallback: 0 }
+    // Far from any test the normal mix applies.
+    const calm: Toets = { ...toets, date: undefined }
     for (let seed = 0; seed < 1000; seed++) {
-      const { e } = engine(seed, start, states)
+      const { e } = engine(seed, start, states, calm)
       counts[e.next().reason]++
     }
     expect(counts.due / 1000).toBeGreaterThan(0.54)
@@ -297,8 +299,11 @@ describe('WordEngine', () => {
     const { e } = engine(1, new Date('2026-10-06T10:00:00').getTime())
     const mix = e.mixFor(40, 2 * DAY)
     expect(mix.fresh).toBeGreaterThan(0.5)
+    expect(mix.fresh).toBeLessThanOrEqual(0.85)
     expect(mix.due + mix.fresh + mix.known).toBeCloseTo(1)
-    expect(e.mixFor(5, 10 * DAY).fresh).toBe(0.25)
+    expect(e.mixFor(5, 10 * DAY).fresh).toBe(0.6) // a few unseen words, test in 10 days
+    expect(e.mixFor(5, 20 * DAY).fresh).toBe(0.25) // test far away: normal mix
+    expect(e.mixFor(0, 2 * DAY).fresh).toBe(0.25) // everything seen
     expect(e.mixFor(40, null).fresh).toBe(0.25)
   })
 

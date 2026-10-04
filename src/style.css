@@ -1415,3 +1415,33 @@ input {
   font-weight: 700;
   color: var(--ink-dim);
 }
+
+/* ---------- build time ---------- */
+
+.build-time.low {
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}
+
+.lock {
+  text-align: center;
+}
+
+.lock h2 {
+  color: var(--ink);
+  margin: 4px 0;
+}
+
+.lock-icon {
+  font-size: 54px;
+  line-height: 1;
+}
+
+.time-badge {
+  font-size: 12px;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-deep);
+}

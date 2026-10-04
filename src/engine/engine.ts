@@ -157,14 +157,15 @@ export class WordEngine {
   }
 
   /**
-   * With the test close and many words never seen, new words get a bigger
-   * share, so every word comes by at least once before the test day. Planned
-   * on two rounds of 12 a day.
+   * Within two weeks of the test, while there are words never seen, new words
+   * get at least 60% of the questions, more when time is short (up to 85%), so every word comes by soon and well before the test day.
+   * Planned on two rounds of 12 a day. The rest stays repetition of missed and
+   * due words, which is what makes them stick.
    */
   mixFor(unseen: number, toTest: number | null): { due: number; fresh: number; known: number } {
-    if (toTest === null || unseen === 0) return this.mix
+    if (toTest === null || unseen === 0 || toTest > 14 * 86_400_000) return this.mix
     const daysLeft = Math.max(1, toTest / 86_400_000 - 1)
-    const needed = Math.min(0.6, unseen / (daysLeft * 24))
+    const needed = Math.min(0.85, Math.max(0.6, unseen / (daysLeft * 24)))
     if (needed <= this.mix.fresh) return this.mix
     const rest = 1 - needed
     const scale = rest / (this.mix.due + this.mix.known)

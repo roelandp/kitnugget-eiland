@@ -3,6 +3,7 @@ import { ITEMS, itemInfo, type ItemId } from '../content/blocks'
 import { canPlace, place, removeTop, type PlaceError } from '../game/build'
 import { addItems, takeItem } from '../game/rewards'
 import { watchInsets } from './common'
+import { EXTENSION_SECONDS, UNLOCK_RIGHT, clock } from '../game/buildtime'
 import { el } from './dom'
 import { startRoaming } from './roam'
 import { catMover, tapOnCat } from './move'
@@ -28,10 +29,13 @@ export function bouwenScreen(app: App): Screen {
   void app.scene.animalLeaves()
   app.syncIsland(true)
 
+  const free = app.buildUnlimited()
+  const timeChip = el('div.chip.build-time', { text: free ? '⏳ onbeperkt' : `⏳ ${clock(app.store.profile.buildTime)}` })
   const top = el(
     'div.topbar',
     {},
     el('button.btn.small.ghost', { onclick: () => app.go('menu') }, '← Klaar'),
+    timeChip,
     el('div.spacer'),
     el('button.btn.round.ghost', { 'aria-label': 'Draai links', onclick: () => turn(-1) }, '↺'),
     el('button.btn.round.ghost', { 'aria-label': 'Draai rechts', onclick: () => turn(1) }, '↻'),
@@ -103,6 +107,7 @@ export function bouwenScreen(app: App): Screen {
   }
 
   function tapAt(clientX: number, clientY: number): void {
+    if (locked) return
     // Kit Nugget always comes first: tap him (whatever is selected), then tap where he should go.
     if ((mover.selected || tapOnCat(app, clientX, clientY)) && mover.tap(clientX, clientY)) return
     if (!tool) {
@@ -226,11 +231,57 @@ export function bouwenScreen(app: App): Screen {
     window.addEventListener('pointercancel', up)
   }
 
+  // ---------- build time: earned by answering, spent here ----------
+
+  let locked = false
+  let bank = app.store.profile.buildTime
+  let sinceSave = 0
+  const save = () =>
+    app.store.update((pp) => {
+      pp.buildTime = bank
+    })
+  const showLock = () => {
+    locked = true
+    tool = null
+    render()
+    const canExtend = !app.store.profile.extensionUsed
+    const card = el(
+      'div.card.detail.lock',
+      {},
+      el('div.lock-icon', { text: '⏳' }),
+      el('h2', { text: 'De bouwtijd is op!' }),
+      canExtend
+        ? el('p', { text: `Doe ${UNLOCK_RIGHT} woorden goed op een rij en je mag nog ${clock(EXTENSION_SECONDS)} verder bouwen.` })
+        : el('p', { text: 'Je hebt al een keer verlengd. Speel een hele ronde, dan verdien je nieuwe bouwtijd.' }),
+      canExtend
+        ? el('button.btn.primary', { style: { width: '100%' }, onclick: () => app.go('round', { unlock: true }) }, `${UNLOCK_RIGHT} goed op een rij`)
+        : null,
+      el(`button.btn${canExtend ? '' : '.primary'}`, { style: { width: '100%', marginTop: '10px' }, onclick: () => app.go('round') }, '▶ Speel een hele ronde'),
+      el('button.btn.small.ghost', { style: { width: '100%', marginTop: '10px' }, onclick: () => app.go('menu') }, 'Naar het begin'),
+    )
+    root.appendChild(el('div.overlay', {}, card))
+  }
+  const ticker = window.setInterval(() => {
+    if (free || locked || document.visibilityState !== 'visible') return
+    bank = Math.max(0, bank - 1)
+    timeChip.textContent = `⏳ ${clock(bank)}`
+    timeChip.classList.toggle('low', bank <= 30)
+    if (bank === 30) app.toast('Nog 30 seconden bouwen')
+    if (++sinceSave >= 5 || bank === 0) {
+      sinceSave = 0
+      save()
+    }
+    if (bank === 0) showLock()
+  }, 1000)
+  if (!free && bank <= 0) showLock()
+
   render()
 
   return {
     root,
     dispose: () => {
+      window.clearInterval(ticker)
+      if (!free) save()
       unwatch()
       stopRoam()
       mover.dispose()
