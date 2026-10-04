@@ -141,40 +141,26 @@ export function bouwenScreen(app: App): Screen {
     render()
   }
 
-  // ---------- gestures on the scene: tap, swipe to turn, pinch to zoom ----------
+  // ---------- taps on the scene (swipe and pinch are handled by the app on every screen) ----------
 
   const pointers = new Map<number, { x: number; y: number; sx: number; sy: number; t: number }>()
-  let pinchStart = 0
-  let zoomStart = 1
   let gestureUsed = false
 
   const onDown = (e: PointerEvent) => {
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() })
     if (pointers.size === 1) gestureUsed = false
-    if (pointers.size === 2) {
-      const [a, b] = [...pointers.values()]
-      pinchStart = Math.hypot(a.x - b.x, a.y - b.y)
-      zoomStart = app.scene.getZoom()
-      gestureUsed = true
-    }
+    if (pointers.size === 2) gestureUsed = true
   }
   const onMove = (e: PointerEvent) => {
     const p = pointers.get(e.pointerId)
     if (!p) return
     p.x = e.clientX
     p.y = e.clientY
-    if (pointers.size === 2 && pinchStart > 0) {
-      const [a, b] = [...pointers.values()]
-      app.scene.setZoom(zoomStart * (Math.hypot(a.x - b.x, a.y - b.y) / pinchStart))
-    }
   }
   const onUp = (e: PointerEvent) => {
     const p = pointers.get(e.pointerId)
     pointers.delete(e.pointerId)
-    if (!p || gestureUsed) {
-      if (pointers.size === 0) pinchStart = 0
-      return
-    }
+    if (!p || gestureUsed) return
     const dx = p.x - p.sx
     const dy = p.y - p.sy
     const dt = performance.now() - p.t
@@ -183,16 +169,11 @@ export function bouwenScreen(app: App): Screen {
       tapAt(e.clientX, e.clientY)
     }
   }
-  const onWheel = (e: WheelEvent) => {
-    e.preventDefault()
-    app.scene.setZoom(app.scene.getZoom() * (e.deltaY > 0 ? 0.92 : 1.08))
-  }
   const stage = app.stage
   stage.addEventListener('pointerdown', onDown)
   window.addEventListener('pointermove', onMove)
   window.addEventListener('pointerup', onUp)
   window.addEventListener('pointercancel', onUp)
-  stage.addEventListener('wheel', onWheel, { passive: false })
 
   // ---------- feeding ----------
 
@@ -250,8 +231,6 @@ export function bouwenScreen(app: App): Screen {
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)
       window.removeEventListener('pointercancel', onUp)
-      stage.removeEventListener('wheel', onWheel)
-      app.scene.setZoom(1)
     },
   }
 }

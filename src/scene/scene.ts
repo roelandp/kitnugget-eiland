@@ -11,6 +11,10 @@ import { Clouds, skyGradient } from './sky'
 import { loadOptionalGlb, normalizeModel } from './glb'
 import { Animator, damp, easeInCubic, easeInOutCubic, easeInOutSine, easeOutBack, easeOutCubic, lerp } from './tween'
 
+
+/** Pinch zoom limits: never so far out the island is a dot, never so close it falls apart. */
+export const ZOOM_MIN = 0.75
+export const ZOOM_MAX = 2.2
 export type { CatPose, CatKind, ImageInset } from './cat'
 export type { BlockType, PlacedBlock } from './blocks'
 export type { PlacedProp } from './props'
@@ -259,6 +263,73 @@ export class IslandScene {
   setProps(props: PlacedProp[]): void {
     this.props.set(props, this.t)
     this.refreshOccupancy()
+    // Something was put down where Kit Nugget stands: he hops aside.
+    if (this.cat && this.blockedTile(this.catTile.x, this.catTile.z)) void this.catWalkTo(this.catTile.x, this.catTile.z)
+  }
+
+  /** Tiles Kit Nugget and visitors do not stand on: furniture (except his basket) and ponds. */
+  private blockedTile(x: number, z: number): boolean {
+    let blocked = false
+    this.props.forEach((p) => {
+      if (p.x === x && p.z === z && p.type !== 'mand') blocked = true
+    })
+    if (blocked) return true
+    const h = this.blocks.heightAt(x, z)
+    return h - Math.floor(h) > 0.5
+  }
+
+  private inIsland(x: number, z: number): boolean {
+    const i = this.island
+    return x >= i.minX && x < i.minX + i.w && z >= i.minZ && z < i.minZ + i.d
+  }
+
+  /** The free tile closest to (x, z), or (x, z) itself when every tile is taken. */
+  private nearestFree(x: number, z: number): { x: number; z: number } {
+    if (!this.blockedTile(x, z)) return { x, z }
+    let best: { x: number; z: number } | null = null
+    let bestD = Infinity
+    const i = this.island
+    for (let tx = i.minX; tx < i.minX + i.w; tx++) {
+      for (let tz = i.minZ; tz < i.minZ + i.d; tz++) {
+        if (this.blockedTile(tx, tz)) continue
+        const d = Math.hypot(tx - x, tz - z) + Math.hypot(tx - this.catTile.x, tz - this.catTile.z) * 0.01
+        if (d < bestD) {
+          bestD = d
+          best = { x: tx, z: tz }
+        }
+      }
+    }
+    return best ?? { x, z }
+  }
+
+  /** Shortest 4-way path around furniture and ponds; a straight line when there is none. */
+  private findPath(x0: number, z0: number, x1: number, z1: number): { x: number; z: number }[] {
+    const key = (x: number, z: number) => `${x},${z}`
+    const prev = new Map<string, string | null>([[key(x0, z0), null]])
+    const queue: [number, number][] = [[x0, z0]]
+    while (queue.length) {
+      const [x, z] = queue.shift()!
+      if (x === x1 && z === z1) {
+        const out: { x: number; z: number }[] = []
+        let k: string | null = key(x, z)
+        while (k && k !== key(x0, z0)) {
+          const [px, pz] = k.split(',').map(Number)
+          out.unshift({ x: px, z: pz })
+          k = prev.get(k) ?? null
+        }
+        return out
+      }
+      for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = x + dx
+        const nz = z + dz
+        const k = key(nx, nz)
+        if (prev.has(k) || !this.inIsland(nx, nz)) continue
+        if (this.blockedTile(nx, nz) && !(nx === x1 && nz === z1)) continue
+        prev.set(k, key(x, z))
+        queue.push([nx, nz])
+      }
+    }
+    return tilePath(x0, z0, x1, z1)
   }
 
   setInsets(top: number, bottom: number): void {
@@ -276,7 +347,7 @@ export class IslandScene {
   }
 
   setZoom(z: number): void {
-    this.zoom = Math.max(0.6, Math.min(2, z))
+    this.zoom = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, z))
   }
   getZoom(): number {
     return this.zoom
@@ -374,7 +445,11 @@ export class IslandScene {
     const minZ = this.island.minZ
     x = Math.max(minX, Math.min(minX + this.island.w - 1, Math.round(x)))
     z = Math.max(minZ, Math.min(minZ + this.island.d - 1, Math.round(z)))
-    const path = tilePath(this.catTile.x, this.catTile.z, x, z)
+    // Never stand inside a tree, a bench or a pond: stop on the nearest free tile.
+    const free = this.nearestFree(x, z)
+    x = free.x
+    z = free.z
+    const path = this.findPath(this.catTile.x, this.catTile.z, x, z)
     if (!path.length) return
     this.catMoving = true
     this.cat?.setWalking(true)
@@ -864,6 +939,24 @@ export class IslandScene {
       // cat already stands on that edge: move one tile sideways along the edge
       if (best[0] !== 0) tz = tz + 1 <= maxZ ? tz + 1 : tz - 1
       else tx = tx + 1 <= maxX ? tx + 1 : tx - 1
+    }
+    // Not inside a tree or bench: slide along the edge to the nearest free tile.
+    if (this.blockedTile(tx, tz)) {
+      const alongX = best[0] === 0
+      for (let step = 1; step < Math.max(w, d); step++) {
+        let found = false
+        for (const s of [step, -step]) {
+          const nx = alongX ? tx + s : tx
+          const nz = alongX ? tz : tz + s
+          if (this.inIsland(nx, nz) && !this.blockedTile(nx, nz) && !(nx === this.catTile.x && nz === this.catTile.z)) {
+            tx = nx
+            tz = nz
+            found = true
+            break
+          }
+        }
+        if (found) break
+      }
     }
     const spot = new THREE.Vector3(tx + 0.5, this.surfaceAt(tx, tz), tz + 0.5)
     return { spot, dir: new THREE.Vector3(best[0], 0, best[1]) }

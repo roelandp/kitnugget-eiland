@@ -53,6 +53,7 @@ export function catMover(app: App, parent: HTMLElement): { tap: (x: number, y: n
 export function onStageTap(app: App, handler: (x: number, y: number) => void): () => void {
   let start: { x: number; y: number; t: number; id: number } | null = null
   const down = (e: PointerEvent) => {
+    // A second finger means a pinch, not a tap.
     start = e.isPrimary ? { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId } : null
   }
   const up = (e: PointerEvent) => {

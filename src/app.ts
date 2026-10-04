@@ -135,17 +135,47 @@ export class App {
   }
 
   /**
-   * A horizontal swipe over the island turns it a quarter, on every screen,
-   * also during a round. Pinches and slow drags are left alone.
+   * On every screen, also during a round: a horizontal swipe over the island
+   * turns it a quarter, two fingers pinch to zoom in and out (within limits),
+   * and a trackpad pinch or mouse wheel zooms too.
    */
   private listenForSwipes(): void {
     const active = new Map<number, { x: number; y: number; t: number }>()
+    const now = new Map<number, { x: number; y: number }>()
     let multi = false
+    let pinchStart = 0
+    let zoomStart = 1
+    const spread = () => {
+      const [a, b] = [...now.values()]
+      return a && b ? Math.hypot(a.x - b.x, a.y - b.y) : 0
+    }
     this.stage.addEventListener('pointerdown', (e) => {
       active.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() })
-      if (active.size > 1) multi = true
+      now.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (active.size > 1) {
+        multi = true
+        pinchStart = spread()
+        zoomStart = this.scene.getZoom()
+      }
     })
+    window.addEventListener('pointermove', (e) => {
+      if (!now.has(e.pointerId)) return
+      now.set(e.pointerId, { x: e.clientX, y: e.clientY })
+      if (now.size === 2 && pinchStart > 0) this.scene.setZoom(zoomStart * (spread() / pinchStart))
+    })
+    this.stage.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault()
+        // Trackpad pinch arrives as a wheel event with ctrlKey and small deltas.
+        const k = e.ctrlKey ? 0.012 : 0.0015
+        this.scene.setZoom(this.scene.getZoom() * Math.exp(-e.deltaY * k))
+      },
+      { passive: false },
+    )
     const end = (e: PointerEvent) => {
+      now.delete(e.pointerId)
+      if (now.size < 2) pinchStart = 0
       const start = active.get(e.pointerId)
       active.delete(e.pointerId)
       const wasMulti = multi
