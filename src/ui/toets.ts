@@ -1,12 +1,11 @@
 import type { App, Screen } from '../app'
 import type { Question } from '../content/types'
-import { checkTyped } from '../engine/answer'
 import { makeRng } from '../engine/rng'
 import { addItems, rewardFor } from '../game/rewards'
 import { addTime, clock, secondsFor } from '../game/buildtime'
 import type { TestResult } from '../storage/schema'
-import { speakButton } from './common'
 import { el } from './dom'
+import { escapeHtml } from './round'
 import { checkLighthouse } from './result'
 
 /** 1 to 10 with one decimal, like a Dutch school grade. */
@@ -43,7 +42,7 @@ export function toetsScreen(app: App): Screen {
         {},
         el('h2', { text: toets.title }),
         el('p', {
-          text: `Je krijgt alle ${toets.questions.length} woorden, door elkaar. Je ziet de betekenis en typt het woord. Net als op school: geen hints, en pas aan het eind zie je hoe het ging. Elk goed woord levert een blok op.`,
+          text: `Je krijgt alle ${toets.questions.length} woorden, door elkaar. Je ziet de betekenis of een zin, en tikt het goede woord. Net als op school: geen hints, en pas aan het eind zie je hoe het ging. Elk goed woord levert een blok op.`,
         }),
         el('button.btn.primary', { style: { width: '100%' }, onclick: () => run() }, 'Start de proeftoets'),
       ),
@@ -78,47 +77,44 @@ export function toetsScreen(app: App): Screen {
 
     const counter = el('div.q-kind')
     const prompt = el('div.q-prompt')
-    const input = el('input.type-input', {
-      type: 'text',
-      autocomplete: 'off',
-      autocorrect: 'off',
-      autocapitalize: 'none',
-      spellcheck: 'false',
-      enterkeyhint: 'next',
-      placeholder: 'Typ het woord...',
-    }) as HTMLInputElement
-    const form = el('form.type-row', {}, input, el('button.btn.green', { type: 'submit' }, 'Volgende'))
-    const card = el('div.card.panel', {}, el('div.q-head', {}, counter, speakButton(app, () => order[i]?.definition ?? '')), prompt, form)
+    const options = el('div.options')
+    const card = el('div.card.panel', {}, counter, prompt, options)
     inner.replaceChildren(card)
 
+    // Mostly "which word fits the meaning", now and then the gap sentence: both as on the school test, no typing.
     const show = () => {
-      counter.textContent = `Vraag ${i + 1} van ${order.length}`
-      prompt.textContent = order[i].definition
-      input.value = ''
-      input.focus()
-    }
-
-    form.addEventListener('submit', (e) => {
-      e.preventDefault()
       const q = order[i]
-      const value = input.value
-      if (!q || busy || value.trim() === '') {
-        input.focus()
-        return
+      const gap = Boolean(q.sentence) && rng.next() < 0.35
+      const pick = engine.make(q, 'fallback', gap ? 'sentence' : 'recognize')
+      counter.textContent = `Vraag ${i + 1} van ${order.length}`
+      if (gap && q.sentence) {
+        const [a, b] = q.sentence.split('___')
+        prompt.innerHTML = `${escapeHtml(a)}<span class="gap">&nbsp;</span>${escapeHtml(b ?? '')}`
+      } else {
+        prompt.textContent = q.definition
       }
-      busy = true
-      window.setTimeout(() => (busy = false), 250)
-      const check = checkTyped(value, q.word)
-      // On a test, spelling counts: almost is not right.
-      const ok = check.result === 'correct'
-      answers.push({ q, answer: value.trim(), ok })
-      engine.record(q.word, 'type', ok ? 'correct' : check.result === 'almost' ? 'almost' : 'wrong')
-      app.saveEngine(engine)
-      app.audio.play('tap')
-      i++
-      if (i >= order.length) finish(answers)
-      else show()
-    })
+      const opts = pick.options!
+      options.replaceChildren(
+        ...opts.labels.map((label, k) =>
+          el('button.opt', {
+            text: label,
+            onclick: () => {
+              if (busy) return
+              busy = true
+              window.setTimeout(() => (busy = false), 300)
+              const ok = k === opts.answer
+              answers.push({ q, answer: label, ok })
+              engine.record(q.word, pick.type, ok ? 'correct' : 'wrong')
+              app.saveEngine(engine)
+              app.audio.play('tap')
+              i++
+              if (i >= order.length) finish(answers)
+              else show()
+            },
+          }),
+        ),
+      )
+    }
     show()
   }
 
@@ -151,18 +147,18 @@ export function toetsScreen(app: App): Screen {
         {},
         el('h2', { text: 'Jouw cijfer' }),
         el('div.grade', { text: gradeText(g) }),
-        el('p.note', { html: `<strong>${correct} van de ${answers.length}</strong> goed gespeld. Je verdient ${items.length} ${items.length === 1 ? 'blok' : 'blokken'} en ${clock(seconds)} bouwtijd.` }),
+        el('p.note', { html: `<strong>${correct} van de ${answers.length}</strong> goed. Je verdient ${items.length} ${items.length === 1 ? 'blok' : 'blokken'} en ${clock(seconds)} bouwtijd.` }),
         lighthouse ? el('p.note', { html: '<strong>Alle woorden geleerd! Er staat een vuurtorentje voor je klaar.</strong>' }) : null,
         wrong.length > 0
           ? el(
               'div',
               {},
-              el('div.section-label', { text: 'Zo schrijf je ze' }),
+              el('div.section-label', { text: 'Deze waren het' }),
               el(
                 'ul.mistakes',
                 {},
                 ...wrong.map((a) =>
-                  el('li', {}, a.answer ? el('span.given', { text: a.answer }) : el('span.given', { text: '(leeg)' }), el('span.good', { text: a.q.word }), el('span', { style: { fontWeight: '700', color: 'var(--ink-dim)', flexBasis: '100%' }, text: a.q.definition })),
+                  el('li', {}, a.answer ? el('span.given', { text: a.answer }) : el('span.given', { text: '-' }), el('span.good', { text: a.q.word }), el('span', { style: { fontWeight: '700', color: 'var(--ink-dim)', flexBasis: '100%' }, text: a.q.definition })),
                 ),
               ),
             )

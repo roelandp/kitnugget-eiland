@@ -90,9 +90,10 @@ export const ANIMALS: AnimalInfo[] = [
   },
   {
     id: 'uil',
-    naam: 'Uil',
+    naam: 'Uilie',
     ask: [
-      'Oehoe! Hoi Kit Nugget. Ik heb een wijze vraag.',
+      'Oehoe! Hoi Kit Nugget. Ik ben het, Uilie! Ik heb een wijze vraag.',
+      'Kiekeboe! Uilie hier. Weet jij dit woord?',
       'Oehoe, weet jij welk woord hierbij hoort?',
       'Hallo Kit Nugget. Zullen we samen slim zijn?',
       'Oehoe! Ik las iets in mijn boek. Help je mij?',

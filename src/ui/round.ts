@@ -10,7 +10,7 @@ import type { Outcome } from '../engine/words'
 import { finishRound } from '../game/day'
 import { addItems, nextStreak, rewardFor } from '../game/rewards'
 import { EXTENSION_SECONDS, LEARNED_BONUS, UNLOCK_RIGHT, addTime, clock, nextRun, secondsFor } from '../game/buildtime'
-import { inventoryChip, sleep, speakButton, updateInventoryChip, watchInsets } from './common'
+import { inventoryChip, sleep, updateInventoryChip, watchInsets } from './common'
 import { el } from './dom'
 
 export const ROUND_LENGTH = 12
@@ -243,16 +243,11 @@ export function roundScreen(app: App, payload?: unknown): Screen {
     return text.length > 130 ? '.xlong' : text.length > 80 ? '.long' : ''
   }
 
-  function speakTextFor(pick: Pick): string {
-    if (pick.type === 'reverse') return pick.q.word
-    if (pick.type === 'sentence' && pick.q.sentence) return pick.q.sentence.replace('___', '... hm ...')
-    return pick.q.definition
-  }
 
   function showQuestion(pick: Pick, intro: string): HTMLElement {
     card.replaceChildren()
     const who = el('div.q-who', { text: intro })
-    const head = el('div.q-head', {}, who, speakButton(app, () => speakTextFor(pick)))
+    const head = el('div.q-head', {}, who)
     const prompt = promptFor(pick)
     const feedback = el('div.feedback')
     const learnBox = el('div.learn.hidden')
@@ -268,7 +263,6 @@ export function roundScreen(app: App, payload?: unknown): Screen {
       el('div.def', { text: q.definition }),
     )
     learnBox.classList.remove('hidden')
-    app.say(`${q.word}. ${q.definition}`)
   }
 
   function fillGap(prompt: HTMLElement, q: Question): void {

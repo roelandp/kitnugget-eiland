@@ -22,8 +22,12 @@ export interface WordState {
   lastSeen: number
   /** Right answers per question type (with hints included). */
   right: Record<QuestionType, number>
-  /** Typed right without hint: what "geleerd" is built on. */
+  /** Typed right without hint (only when typing is switched on). */
   typedClean: number
+  /** Separate sittings (2+ hours apart) in which the word was answered right. */
+  sittings: number
+  /** Timestamp of the last right answer, 0 when never. */
+  lastRightAt: number
   /** Answers in a row that were right. */
   streak: number
   /** Wrong answers in a row. */
@@ -46,6 +50,8 @@ export function emptyState(): WordState {
     lastSeen: 0,
     right: { recognize: 0, reverse: 0, sentence: 0, type: 0 },
     typedClean: 0,
+    sittings: 0,
+    lastRightAt: 0,
     streak: 0,
     wrongStreak: 0,
     retryIn: -1,
@@ -73,6 +79,8 @@ export function reviveState(raw: unknown): WordState {
     lastSeen: num(v.lastSeen, 0),
     right,
     typedClean: num(v.typedClean, 0),
+    sittings: num(v.sittings, 0),
+    lastRightAt: num(v.lastRightAt, 0),
     streak: num(v.streak, 0),
     wrongStreak: num(v.wrongStreak, 0),
     retryIn: num(v.retryIn, -1),
@@ -109,9 +117,15 @@ export function isDue(s: WordState, now: number, msToTest: number | null): boole
   return false
 }
 
+/**
+ * Geleerd: box 4 or higher, and right on two separate moments (2+ hours
+ * apart) after both directions were right at least once. Typing is not needed;
+ * a word typed right twice (when typing is on) also counts.
+ */
 export function statusOf(s: WordState): WordStatus {
   if (s.seen === 0) return 'nieuw'
-  if (s.box >= 4 && s.typedClean >= 2) return 'geleerd'
+  const bothWays = s.right.recognize >= 1 && s.right.reverse >= 1
+  if (s.box >= 4 && (s.typedClean >= 2 || (s.sittings >= 2 && bothWays))) return 'geleerd'
   if (s.box >= 3) return 'bijna'
   return 'oefenen'
 }
@@ -123,10 +137,16 @@ export function statusOf(s: WordState): WordStatus {
  * variety on words that are already strong. After two misses in a row while
  * typing, one easier question helps to get the word back.
  */
-export function typeFor(s: WordState, hasSentence: boolean, roll: number): QuestionType {
+export function typeFor(s: WordState, hasSentence: boolean, roll: number, typing = false): QuestionType {
   if (s.right.recognize < 1) return 'recognize'
   if (s.right.reverse < 1) return 'reverse'
   if (hasSentence && s.right.sentence < 1) return 'sentence'
+  if (!typing) {
+    // No typing: keep mixing the three choice questions, the harder ones a bit more often.
+    if (s.wrongStreak >= 2) return 'recognize'
+    if (hasSentence) return roll < 0.4 ? 'sentence' : roll < 0.75 ? 'reverse' : 'recognize'
+    return roll < 0.6 ? 'reverse' : 'recognize'
+  }
   if (s.wrongStreak >= 2) return hasSentence ? 'sentence' : 'recognize'
   if (s.box >= 4 && s.typedClean >= 2 && roll < 0.25) {
     const pool: QuestionType[] = hasSentence ? ['reverse', 'sentence'] : ['reverse']
@@ -153,6 +173,10 @@ export function applyAnswer(
   s.last = outcome
 
   if (outcome === 'correct' || outcome === 'hint') {
+    // A new sitting: the first right answer, or 2+ hours after the previous one.
+    const newSitting = prev.lastRightAt === 0 || now - prev.lastRightAt >= SPACING_MS
+    if (newSitting) s.sittings++
+    s.lastRightAt = now
     s.correct++
     s.right[type]++
     s.streak++
@@ -172,8 +196,9 @@ export function applyAnswer(
       s.right.reverse = Math.max(1, s.right.reverse)
       s.right.sentence = Math.max(1, s.right.sentence)
     } else if (outcome === 'correct') {
-      // Choice questions lift a word up to box 3 at most; the top boxes are earned by typing.
-      if (s.box < 3) s.box = (s.box + 1) as Box
+      // Choice questions lift a word one box. Above box 3 only on a new sitting,
+      // so the top boxes need the word to be right again later, not twice in a row.
+      if (s.box < 3 || (newSitting && s.box < MAX_BOX)) s.box = (s.box + 1) as Box
       // Recognised right the very first time: the meaning is known, skip the reverse step.
       if (prev.seen === 0 && type === 'recognize') s.right.reverse = Math.max(1, s.right.reverse)
     }

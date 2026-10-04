@@ -64,6 +64,8 @@ export interface Profile {
   buildTime: number
   /** The one-off extension (5 right in a row) was used; a full round frees it again. */
   extensionUsed: boolean
+  /** The starter set of furniture was handed out. */
+  starterGiven: boolean
 }
 
 export interface SaveFile {
@@ -85,6 +87,7 @@ export function emptyProfile(naam = 'Viggo'): Profile {
     stats: { rounds: 0, fed: 0, answers: 0 },
     buildTime: START_SECONDS,
     extensionUsed: false,
+    starterGiven: false,
   }
 }
 
@@ -165,6 +168,7 @@ function migrateProfile(raw: unknown): Profile {
   p.stats = { rounds: num(stats.rounds, 0), fed: num(stats.fed, 0), answers: num(stats.answers, 0) }
   p.buildTime = Math.max(0, Math.min(CAP_SECONDS, num(v.buildTime, START_SECONDS)))
   p.extensionUsed = v.extensionUsed === true
+  p.starterGiven = v.starterGiven === true
   return p
 }
 

@@ -30,6 +30,8 @@ export interface EngineOptions {
   states?: Record<string, unknown>
   seed?: number
   now?: () => number
+  /** Typing questions; off for now, multiple choice and gap sentences only. */
+  typing?: boolean
   /** Share of picks per pool. Defaults to 60% due or weak, 25% new, 15% known. */
   mix?: { due: number; fresh: number; known: number }
 }
@@ -47,12 +49,14 @@ export class WordEngine {
   private now: () => number
   private mix: { due: number; fresh: number; known: number }
   private lastWord: string | null = null
+  private typing: boolean
 
   constructor(opts: EngineOptions) {
     this.toets = opts.toets
     this.rng = makeRng(opts.seed ?? (Date.now() & 0x7fffffff))
     this.now = opts.now ?? (() => Date.now())
     this.mix = opts.mix ?? DEFAULT_MIX
+    this.typing = opts.typing ?? false
     for (const q of this.toets.questions) {
       this.states.set(q.word, reviveState(opts.states?.[q.word]))
     }
@@ -175,7 +179,7 @@ export class WordEngine {
   /** A pick for a given word, e.g. for the practice test. */
   make(q: Question, reason: PickReason, forceType?: QuestionType): Pick {
     const s = this.state(q.word)
-    const type = forceType ?? typeFor(s, Boolean(q.sentence), this.rng.next())
+    const type = forceType ?? typeFor(s, Boolean(q.sentence), this.rng.next(), this.typing)
     let options: Options | null = null
     if (type === 'recognize') options = buildOptions(q, this.questions, this.rng, 'word')
     else if (type === 'reverse') options = buildOptions(q, this.questions, this.rng, 'definition')

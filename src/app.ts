@@ -1,6 +1,6 @@
 import { Audio } from './audio/audio'
-import { speak, stopSpeaking } from './audio/speak'
-import { itemInfo, type ItemId } from './content/blocks'
+import { FURNITURE, itemInfo, type ItemId } from './content/blocks'
+import { addItems } from './game/rewards'
 import { activeToets, TOETSEN, type Toets } from './content'
 import { ANIMAL_IDS, type AnimalId } from './scene/animals'
 import { IslandScene, type BlockType } from './scene/scene'
@@ -114,6 +114,7 @@ export class App {
     }
     this.scene = scene
     this.sceneKind = kind
+    this.giveStarterSet()
     this.dresser = new CatDresser(this.base)
     this.dresser.subscribe(() => this.pushLook())
     this.applyLook()
@@ -201,7 +202,6 @@ export class App {
   go(id: ScreenId, payload?: unknown): void {
     const factory = this.screens.get(id)
     if (!factory) return
-    stopSpeaking()
     this.current?.dispose?.()
     clear(this.host)
     this.current = factory(this, payload)
@@ -256,6 +256,16 @@ export class App {
       for (const q of t.questions) if (words[q.word] && statusOf(words[q.word]) === 'geleerd') n++
     }
     return n
+  }
+
+  /** One of each piece of furniture, once, so the build bar has more than blocks from the start. */
+  private giveStarterSet(): void {
+    if (this.store.profile.starterGiven) return
+    const set = FURNITURE.filter((f) => f.id !== 'vuurtoren').map((f) => f.id)
+    this.store.update((p) => {
+      p.inventory = addItems(p.inventory, set)
+      p.starterGiven = true
+    })
   }
 
   /** Every word of the active test learned: building has no time limit any more. */
@@ -367,10 +377,6 @@ export class App {
 
   // ---------- small shared effects ----------
 
-  say(text: string): void {
-    if (!this.store.profile.settings.speak) return
-    speak(text)
-  }
 
   /** Reward icons fly from Kit Nugget to a target element. */
   flyRewards(items: ItemId[], target: HTMLElement | null): Promise<void> {

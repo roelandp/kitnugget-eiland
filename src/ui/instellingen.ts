@@ -82,16 +82,6 @@ export function instellingenScreen(app: App): Screen {
       if (v) app.audio.play('right')
     }),
   )
-  const speakRow = el(
-    'div.setting',
-    {},
-    el('label', {}, 'Voorlezen', el('small', { style: { display: 'block', color: 'var(--ink-dim)', fontWeight: '700' }, text: 'Leest het goede woord voor als het nog niet lukte' })),
-    toggle(p.settings.speak, (v) => {
-      app.store.update((pp) => {
-        pp.settings.speak = v
-      })
-    }),
-  )
 
   const body = el(
     'div.scroller',
@@ -100,7 +90,7 @@ export function instellingenScreen(app: App): Screen {
       'div.narrow',
       {},
       el('div.card.panel', {}, el('h2', { text: 'Welke toets oefen je?' }), list),
-      el('div.card.panel', {}, soundRow, speakRow),
+      el('div.card.panel', {}, soundRow),
       el('div.card.panel', {}, el('h2', { text: 'Opnieuw beginnen' }), confirmBox),
       el('p.tiny', { text: `Versie ${__BUILD_ID__.slice(0, 16).replace('T', ' ')} · Kit Nugget: ${app.sceneKind}` }),
     ),

@@ -28,7 +28,7 @@ export function startRoaming(app: App, opts: { tiredSleep?: boolean } = {}): () 
       const blocks = app.store.profile.island.blocks
       const t = app.scene.tiles()
       const tired = goalDone(app.store.profile.days, Date.now())
-      const basket = findItem(blocks, 'mand')
+      const basket = findItem(blocks, 'mand') ?? findItem(blocks, 'bed')
       if (opts.tiredSleep && tired && basket) {
         await app.scene.catWalkTo(basket.x, basket.z)
         if (stopped) return

@@ -50,11 +50,11 @@ Debug: `?cat=sprite` of `?cat=primitive` forceert een andere Kit Nugget.
 
 ## Hoe het leren werkt
 
-- Elk woord klimt langs vier vraagsoorten: herkennen (betekenis, kies het woord), omgekeerd (woord, kies de betekenis), zin met gat, en typen.
+- Elk woord klimt langs drie vraagsoorten: herkennen (betekenis, kies het woord), omgekeerd (woord, kies de betekenis) en zin met gat. Typen staat uit (zit nog in de code: `typing: true` in de engine).
 - Leitner-doosjes 0 t/m 5 met wachttijden 0, 0, 1, 2, 4, 8 dagen, die krimpen als de toets dichtbij is. De dag voor de toets komt alles onder doosje 4 terug.
-- Fout: het goede antwoord komt in beeld (en wordt voorgelezen), Viggo tikt of typt het alsnog, en het woord komt binnen 3 vragen terug.
-- Typen: lidwoord mag weg; fout lidwoord, geen trema of één letter anders is "bijna goed" (telt niet als goed, want op de toets telt spelling).
-- "Geleerd" = doosje 4 of hoger en minstens 2 keer goed getypt.
+- Fout: het goede antwoord komt in beeld, Viggo tikt het alsnog, en het woord komt binnen 3 vragen terug. Voorlezen staat uit.
+- "Geleerd" = doosje 4 of hoger, beide richtingen minstens één keer goed, en goed op twee aparte momenten (minstens 2 uur ertussen). Boven doosje 3 kom je alleen met een goed antwoord op een nieuw moment, dus twee keer achter elkaar goed telt niet dubbel.
+- De proeftoets is meerkeuze (betekenis of zin met gat), zonder hints en zonder feedback per vraag.
 - Woordenkaart: per woord de status, hoe vaak goed/fout, en wanneer het terugkomt. Dit is ook het overzicht voor ouders.
 
 ## Eigen 3D-modellen

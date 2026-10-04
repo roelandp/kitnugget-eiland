@@ -4,7 +4,6 @@ import { daysUntil } from '../content'
 import { ROUNDS_PER_DAY, roundsToday } from '../game/day'
 import { growthProgress } from '../game/island'
 import type { Inventory } from '../game/rewards'
-import { speak } from '../audio/speak'
 import { el } from './dom'
 
 /** Two paw prints that colour in per finished round today. */
@@ -37,18 +36,6 @@ export function watchInsets(app: App, top: HTMLElement | null, bottom: HTMLEleme
   }
 }
 
-export function speakButton(app: App, text: () => string): HTMLElement {
-  return el('button.speak', {
-    'aria-label': 'Voorlezen',
-    onclick: (e: Event) => {
-      e.stopPropagation()
-      app.audio.unlock()
-      // The button always reads aloud, even when automatic reading is off.
-      speak(text())
-    },
-    text: '🔊',
-  })
-}
 
 /** "nog 4 dagen", "morgen", "vandaag". */
 export function testCountdown(date: string | undefined): string | null {
@@ -104,7 +91,7 @@ export function growthBar(app: App): HTMLElement {
     {},
     el('div.grow-label', {}, el('span', { text: '🏝️' }), el('span', { text: `Nog ${toGo} ${toGo === 1 ? 'woord' : 'woorden'} echt leren, dan groeit het eiland` })),
     el('div.grow-track', {}, fillEl),
-    almost > 0 ? el('div.grow-sub', { text: `${almost} ${almost === 1 ? 'woord is' : 'woorden zijn'} bijna geleerd. Typ ze nog eens goed op een ander moment!` }) : null,
+    almost > 0 ? el('div.grow-sub', { text: `${almost} ${almost === 1 ? 'woord is' : 'woorden zijn'} bijna geleerd. Doe ze straks of morgen nog eens goed!` }) : null,
   )
   // Grow into place, so a change after a round is visible.
   requestAnimationFrame(() => requestAnimationFrame(() => (fillEl.style.width = `${Math.round(fill * 100)}%`)))

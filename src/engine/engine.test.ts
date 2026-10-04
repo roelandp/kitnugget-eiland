@@ -177,7 +177,7 @@ describe('leitner', () => {
   it('a clean typed answer skips the easy steps', () => {
     const s = applyAnswer(emptyState(), 'type', 'correct', t0, null)
     expect(s.box).toBe(4)
-    expect(typeFor(s, true, 0.9)).toBe('type')
+    expect(typeFor(s, true, 0.9, true)).toBe('type')
   })
 
   it('shrinks waiting times close to the test and brings weak words back the day before', () => {
@@ -191,23 +191,54 @@ describe('leitner', () => {
     expect(isDue({ ...s, box: 4 }, t0, DAY)).toBe(false)
   })
 
-  it('climbs the question types from easy to hard', () => {
+  it('climbs the question types from easy to hard (typing on)', () => {
     let s = emptyState()
-    expect(typeFor(s, true, 0.5)).toBe('recognize')
-    expect(typeFor(applyAnswer(s, 'recognize', 'correct', t0, null), true, 0.5)).toBe('sentence') // known at first sight
+    expect(typeFor(s, true, 0.5, true)).toBe('recognize')
+    expect(typeFor(applyAnswer(s, 'recognize', 'correct', t0, null), true, 0.5, true)).toBe('sentence') // known at first sight
     s = applyAnswer(s, 'recognize', 'wrong', t0, null)
-    expect(typeFor(s, true, 0.5)).toBe('recognize')
+    expect(typeFor(s, true, 0.5, true)).toBe('recognize')
     s = applyAnswer(s, 'recognize', 'correct', t0, null)
-    expect(typeFor(s, true, 0.5)).toBe('reverse')
+    expect(typeFor(s, true, 0.5, true)).toBe('reverse')
     s = applyAnswer(s, 'reverse', 'correct', t0, null)
-    expect(typeFor(s, true, 0.5)).toBe('sentence')
-    expect(typeFor(s, false, 0.5)).toBe('type') // no sentence: skip the gap question
+    expect(typeFor(s, true, 0.5, true)).toBe('sentence')
+    expect(typeFor(s, false, 0.5, true)).toBe('type') // no sentence: skip the gap question
     s = applyAnswer(s, 'sentence', 'correct', t0, null)
-    expect(typeFor(s, true, 0.5)).toBe('type')
+    expect(typeFor(s, true, 0.5, true)).toBe('type')
     s = applyAnswer(s, 'type', 'wrong', t0, null)
-    expect(typeFor(s, true, 0.5)).toBe('type')
+    expect(typeFor(s, true, 0.5, true)).toBe('type')
     s = applyAnswer(s, 'type', 'wrong', t0, null)
-    expect(typeFor(s, true, 0.5)).toBe('sentence') // two misses: one easier question
+    expect(typeFor(s, true, 0.5, true)).toBe('sentence') // two misses: one easier question
+  })
+
+  it('without typing only asks choice and gap questions', () => {
+    let s = emptyState()
+    s = applyAnswer(s, 'recognize', 'correct', t0, null)
+    s = applyAnswer(s, 'sentence', 'correct', t0, null)
+    for (const roll of [0, 0.2, 0.39, 0.5, 0.8, 0.99]) {
+      expect(['recognize', 'reverse', 'sentence']).toContain(typeFor(s, true, roll))
+      expect(['recognize', 'reverse']).toContain(typeFor(s, false, roll))
+    }
+  })
+
+  it('learns a word without typing: right on two separate moments, both ways', () => {
+    const H = 3_600_000
+    let s = emptyState()
+    s = applyAnswer(s, 'recognize', 'correct', t0, null)
+    s = applyAnswer(s, 'reverse', 'correct', t0 + 60_000, null)
+    s = applyAnswer(s, 'sentence', 'correct', t0 + 120_000, null)
+    expect(s.box).toBe(3)
+    expect(statusOf(s)).toBe('bijna')
+    // Same sitting again: no higher box.
+    s = applyAnswer(s, 'reverse', 'correct', t0 + 180_000, null)
+    expect(s.box).toBe(3)
+    expect(statusOf(s)).toBe('bijna')
+    // Hours later, right again: learned.
+    s = applyAnswer(s, 'reverse', 'correct', t0 + 3 * H, null)
+    expect(s.box).toBe(4)
+    expect(s.sittings).toBe(2)
+    expect(statusOf(s)).toBe('geleerd')
+    s = applyAnswer(s, 'recognize', 'wrong', t0 + 4 * H, null)
+    expect(statusOf(s)).toBe('oefenen')
   })
 })
 

@@ -2,7 +2,6 @@ import type { App, Screen } from '../app'
 import type { Question } from '../content/types'
 import { gapForm } from '../engine/text'
 import { statusOf, type WordState, type WordStatus } from '../engine/words'
-import { speakButton } from './common'
 import { el } from './dom'
 import { escapeHtml } from './round'
 
@@ -65,7 +64,7 @@ export function kaartScreen(app: App): Screen {
     const box = el(
       'div.card.detail',
       { onclick: (e: Event) => e.stopPropagation() },
-      el('div.q-head', {}, el('h2', { text: q.word, style: { flex: '1' } }), speakButton(app, () => `${q.word}. ${q.definition}`)),
+      el('div.q-head', {}, el('h2', { text: q.word, style: { flex: '1' } })),
       el('div', {}, el(`span.chip.st-${st}`, { text: LABEL[st] })),
       el('p', { text: q.definition }),
       sentence ? el('p.sentence', { html: escapeHtml(q.sentence ?? '').replace('___', `<b>${escapeHtml(gapForm(q.word))}</b>`) }) : null,
@@ -76,7 +75,7 @@ export function kaartScreen(app: App): Screen {
         el('div', {}, el('b', { text: String(s.seen) }), 'keer gezien'),
         el('div', {}, el('b', { text: String(s.correct) }), 'keer goed'),
         el('div', {}, el('b', { text: String(s.wrong) }), 'keer fout'),
-        el('div', {}, el('b', { text: String(s.typedClean) }), 'goed getypt'),
+        el('div', {}, el('b', { text: String(s.sittings) }), 'keer goed op een ander moment'),
         el('div', {}, el('b', { text: `${s.box} / 5` }), 'doosje'),
         el('div', {}, el('b', { text: when(s, Date.now()), style: { fontSize: '17px' } }), 'komt terug'),
       ),

@@ -12,7 +12,7 @@ export interface PlacedProp {
   rot?: number
 }
 
-export const PROP_TYPES = ['mand', 'krabpaal', 'voerbak', 'lantaarn', 'bankje', 'boompje', 'hek', 'vuurtoren'] as const
+export const PROP_TYPES = ['mand', 'bed', 'krabpaal', 'voerbak', 'lantaarn', 'bankje', 'boompje', 'hek', 'bloempot', 'parasol', 'tafeltje', 'vuurtoren'] as const
 
 /** Approximate heights, used for camera framing. */
 export const PROP_HEIGHT: Record<string, number> = {
@@ -23,6 +23,10 @@ export const PROP_HEIGHT: Record<string, number> = {
   bankje: 0.55,
   boompje: 1.1,
   hek: 0.45,
+  bed: 0.35,
+  bloempot: 0.6,
+  parasol: 1.2,
+  tafeltje: 0.5,
   vuurtoren: 2.3,
 }
 
@@ -241,6 +245,45 @@ function buildVuurtoren(g: THREE.Group): { glow: THREE.Sprite; beam: THREE.Objec
   return { glow: gl, beam }
 }
 
+/** A soft cat bed: a padded frame with a cushion and a little pillow. */
+function buildBed(g: THREE.Group): void {
+  add(g, rbox(0.86, 0.16, 0.72, 0.07), mat('#c98f5b'), 0, 0.08, 0)
+  add(g, rbox(0.78, 0.12, 0.64, 0.06), mat('#f6b8d0'), 0, 0.2, 0)
+  add(g, rbox(0.86, 0.3, 0.1, 0.05), mat('#b97d4b'), 0, 0.22, -0.33)
+  add(g, rbox(0.3, 0.08, 0.2, 0.04), mat('#fff6e8'), 0, 0.29, -0.18)
+  for (const [x, z] of [[-0.3, 0.12], [0.18, 0.05], [-0.05, 0.2]]) add(g, sphere(0.035, 8, 6), mat('#ffffff'), x, 0.265, z, false)
+}
+
+/** A terracotta pot with a round green plant and two flowers. */
+function buildBloempot(g: THREE.Group): void {
+  add(g, cyl(0.2, 0.15, 0.28, 14), mat('#e08a5f'), 0, 0.14, 0)
+  add(g, cyl(0.23, 0.23, 0.06, 14), mat('#c96f48'), 0, 0.29, 0)
+  add(g, sphere(0.22, 12, 10), mat('#7cc47f'), 0, 0.45, 0)
+  add(g, sphere(0.06, 8, 6), mat('#ff9ec0'), 0.12, 0.6, 0.08)
+  add(g, sphere(0.06, 8, 6), mat('#fff1a0'), -0.1, 0.57, -0.06)
+}
+
+/** A beach umbrella in candy stripes on a thin pole. */
+function buildParasol(g: THREE.Group): void {
+  add(g, cyl(0.12, 0.14, 0.05, 14), mat('#c9c5cf'), 0, 0.025, 0)
+  add(g, cyl(0.025, 0.025, 1.0, 8), mat('#fff6e8'), 0, 0.52, 0)
+  const colors = ['#ff9ec0', '#fff6e8']
+  for (let i = 0; i < 8; i++) {
+    const wedge = geo(`parasol-wedge`, () => new THREE.ConeGeometry(0.55, 0.22, 8, 1, true, 0, Math.PI / 4))
+    const m = add(g, wedge, mat(colors[i % 2]), 0, 1.06, 0, true)
+    m.rotation.y = (i * Math.PI) / 4
+  }
+  add(g, sphere(0.04, 8, 6), mat('#ff9ec0'), 0, 1.18, 0)
+}
+
+/** A small round garden table. */
+function buildTafeltje(g: THREE.Group): void {
+  add(g, cyl(0.3, 0.3, 0.06, 18), mat('#f4efe9'), 0, 0.46, 0)
+  add(g, cyl(0.035, 0.035, 0.42, 8), mat('#c98f5b'), 0, 0.22, 0)
+  add(g, cyl(0.16, 0.18, 0.04, 14), mat('#c98f5b'), 0, 0.02, 0)
+  add(g, cyl(0.07, 0.06, 0.08, 10), mat('#9ec9f0'), 0.1, 0.53, 0.05)
+}
+
 /** Builds a prop. Static parts are merged into one vertex-coloured mesh (one draw call). */
 export function buildProp(type: string): THREE.Group {
   const g = buildRaw(type)
@@ -310,6 +353,18 @@ function buildRaw(type: string): THREE.Group {
       break
     case 'hek':
       buildHek(g)
+      break
+    case 'bed':
+      buildBed(g)
+      break
+    case 'bloempot':
+      buildBloempot(g)
+      break
+    case 'parasol':
+      buildParasol(g)
+      break
+    case 'tafeltje':
+      buildTafeltje(g)
       break
     case 'vuurtoren': {
       const r = buildVuurtoren(g)

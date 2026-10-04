@@ -214,3 +214,11 @@ Fase 1 t/m 3 zijn gebouwd, fase 4 en 5 getest. Implementatienotities:
 - Engine-keuzes bovenop de spec: meerkeuze tilt een woord hooguit naar doosje 3, de bovenste doosjes verdien je met typen; een woord dat schoon goed getypt wordt springt naar minstens doosje 4; meteen goed herkend slaat de omgekeerd-stap over; bij weinig dagen tot de toets en veel ongeziene woorden groeit het aandeel nieuwe woorden (max 60%).
 - Eilandgroei: 4x4, dan om en om een strook breder/dieper per 5 geleerde woorden, 8x8 bij 40, max 12x12.
 - Het vuurtorentje komt in de inventaris (eenmalig per toets) en zet je zelf neer in Bouwen.
+
+### Wijzigingen 4 oktober middag (Roeland)
+- Geen typvragen meer: alleen meerkeuze en zin met gat (engine-optie `typing`, standaard uit). Proeftoets is meerkeuze.
+- Geleerd zonder typen: doosje 4+, beide richtingen een keer goed, en goed op 2 aparte momenten (2+ uur ertussen). Boven doosje 3 alleen met een goed antwoord op een nieuw moment.
+- Voorlezen (TTS) helemaal uit: geen luidsprekerknoppen, geen automatisch voorlezen, geen instelling.
+- De uil heet Uilie en is een 3D-model (`public/models/uil.glb`, Meshy, textures verkleind).
+- Nieuwe meubels: kattenbed, bloempot, parasol, tafeltje. Eenmalig startpakket met een van elk meubel (behalve vuurtorentje). Kit Nugget slaapt in mand of bed.
+- Bouwtijd: verdienen met goede antwoorden (max 5 min), één keer verlengen met 5 goed op een rij (1:30), daarna eerst een hele ronde of proeftoets.

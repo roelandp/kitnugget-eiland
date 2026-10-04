@@ -271,7 +271,7 @@ export class IslandScene {
   private blockedTile(x: number, z: number): boolean {
     let blocked = false
     this.props.forEach((p) => {
-      if (p.x === x && p.z === z && p.type !== 'mand') blocked = true
+      if (p.x === x && p.z === z && p.type !== 'mand' && p.type !== 'bed') blocked = true
     })
     if (blocked) return true
     const h = this.blocks.heightAt(x, z)
