@@ -1245,3 +1245,20 @@ input {
     margin-bottom: 10px;
   }
 }
+
+@media (max-width: 699px) {
+  .menu-panel {
+    gap: 10px;
+  }
+  .menu-panel .btn:not(.primary) {
+    font-size: 16px;
+    padding: 0 10px;
+    white-space: nowrap;
+    min-height: 52px;
+  }
+  .menu-panel .settings-btn {
+    grid-column: 1 / -1;
+    min-height: 44px;
+    font-size: 15px;
+  }
+}

@@ -1123,7 +1123,7 @@ export class IslandScene {
     const vx = (minX + maxX) / 2
     // with vertical room to spare, sit the island a bit lower so a band of sky shows on top
     const slackPx = Hv - 2 * margin - spanY / (s * this.zoomCur)
-    const vy = (minY + maxY) / 2 + (slackPx > 0 ? slackPx * 0.45 * s : 0)
+    const vy = (minY + maxY) / 2 + (slackPx > 0 ? slackPx * 0.22 * s : 0)
     const f = this.frame
     const k = f.valid ? damp(dt, 0.09) : 1
     f.s = lerp(f.s, s, k)

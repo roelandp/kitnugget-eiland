@@ -44,7 +44,7 @@ export function markedWord(answer: string, word: string): HTMLElement {
   // Compare against the form the player aimed at: with article if they typed one.
   const { article } = splitArticle(word)
   const typedArticle = /^(de|het|een)\s/i.test(answer.trim())
-  const target = article && !typedArticle ? gapForm(word) : word
+  const target = article && !typedArticle && answer.trim() ? gapForm(word) : word
   const marks = answer.trim() ? diffMarks(answer.trim(), target) : [...target].map((ch) => ({ ch, ok: true }))
   for (const m of marks) {
     if (m.ok) wrap.appendChild(document.createTextNode(m.ch))

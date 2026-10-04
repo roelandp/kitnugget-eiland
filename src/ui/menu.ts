@@ -1,6 +1,6 @@
 import type { App, Screen } from '../app'
 import { TOETSEN, formatDate } from '../content'
-import { goalDone, isAsleep } from '../game/day'
+import { goalDone, isAsleep, roundsToday } from '../game/day'
 import { wordsToNextStep } from '../game/island'
 import { inventoryChip, paws, testCountdown, watchInsets } from './common'
 import { el } from './dom'
@@ -28,7 +28,7 @@ export function menuScreen(app: App): Screen {
     el(
       'div.menu-stats',
       {},
-      el('span.chip', {}, paws(app)),
+      el('span.chip', {}, paws(app), p.days.played > 0 ? ` dag ${p.days.played + (roundsToday(p.days, now) > 0 ? 0 : 1)}` : ''),
       el('span.chip', { text: `⭐ ${learned} van ${total} geleerd` }),
       inventoryChip(p.inventory),
     ),
@@ -56,7 +56,7 @@ export function menuScreen(app: App): Screen {
     el('button.btn', { onclick: () => app.go('toets') }, '📝 Proeftoets'),
     el('button.btn', { onclick: () => app.go('kaart') }, '🗺️ Woordenkaart'),
     el('button.btn', { onclick: () => app.go('aankleden') }, '👒 Aankleden'),
-    el('button.btn', { onclick: () => app.go('instellingen') }, '⚙️ Instellingen'),
+    el('button.btn.settings-btn', { onclick: () => app.go('instellingen') }, '⚙️ Instellingen'),
   )
   const sheet = el('div.card.sheet', {}, el('div.sheet-scroll', {}, ...lines, panel))
 
