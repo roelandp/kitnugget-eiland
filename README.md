@@ -53,7 +53,7 @@ Debug: `?cat=sprite` of `?cat=primitive` forceert een andere Kit Nugget.
 - Elk woord klimt langs drie vraagsoorten: herkennen (betekenis, kies het woord), omgekeerd (woord, kies de betekenis) en zin met gat. Typen staat uit (zit nog in de code: `typing: true` in de engine).
 - Leitner-doosjes 0 t/m 5 met wachttijden 0, 0, 1, 2, 4, 8 dagen, die krimpen als de toets dichtbij is. De dag voor de toets komt alles onder doosje 4 terug.
 - Fout: het goede antwoord komt in beeld, Viggo tikt het alsnog, en het woord komt binnen 3 vragen terug. Voorlezen staat uit.
-- "Geleerd" = doosje 4 of hoger, beide richtingen minstens één keer goed, en goed op twee aparte momenten (minstens 2 uur ertussen). Boven doosje 3 kom je alleen met een goed antwoord op een nieuw moment, dus twee keer achter elkaar goed telt niet dubbel.
+- "Geleerd" = 3 keer goed, waarvan minstens één keer op een later moment (5+ minuten na een eerder goed antwoord: later in de ronde of de volgende ronde), en het laatste antwoord goed. Kan dus binnen een sessie. In de laatste week voor de toets komen woorden na 3 tot 5 minuten terug.
 - De proeftoets is meerkeuze (betekenis of zin met gat), zonder hints en zonder feedback per vraag.
 - Woordenkaart: per woord de status, hoe vaak goed/fout, en wanneer het terugkomt. Dit is ook het overzicht voor ouders.
 

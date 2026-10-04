@@ -92,8 +92,14 @@ export function reviveState(raw: unknown): WordState {
 export const BOX_DAYS = [0, 0, 1, 2, 4, 8]
 const DAY = 86_400_000
 const HOUR = 3_600_000
-/** Two clean typings count separately only with this much time between them. */
-export const SPACING_MS = 2 * HOUR
+/**
+ * Two right answers count as two separate moments only with this much time
+ * between them: later in the round or in the next one, never twice in a row.
+ */
+export const SPACING_MS = 5 * 60_000
+const MINUTE = 60_000
+/** In the last week before the test: words come back within minutes, so they can be learned in one sitting. */
+const TEST_WEEK_MS = [0, 0, 3 * MINUTE, 5 * MINUTE, 2 * HOUR, DAY]
 
 /**
  * With the test close by there is no time for long gaps: the waiting times
@@ -103,6 +109,7 @@ export const SPACING_MS = 2 * HOUR
 export function intervalMs(box: Box, msToTest: number | null): number {
   const days = BOX_DAYS[box] ?? 0
   if (days === 0) return 0
+  if (msToTest !== null && msToTest > 0 && msToTest <= 7 * DAY) return TEST_WEEK_MS[box] ?? 0
   let factor = 1
   if (msToTest !== null && msToTest > 0) factor = Math.max(0.25, Math.min(1, msToTest / (14 * DAY)))
   // Never shorter than a few hours, so a word does not bounce back in the same sitting.
@@ -118,15 +125,16 @@ export function isDue(s: WordState, now: number, msToTest: number | null): boole
 }
 
 /**
- * Geleerd: box 4 or higher, and right on two separate moments (2+ hours
- * apart) after both directions were right at least once. Typing is not needed;
- * a word typed right twice (when typing is on) also counts.
+ * Geleerd: right three times (box 3 or higher), of which at least once on a
+ * later moment (5+ minutes after an earlier right answer), and the last answer
+ * was right. Typing is not needed; a word typed right twice (when typing is
+ * on) also counts.
  */
 export function statusOf(s: WordState): WordStatus {
   if (s.seen === 0) return 'nieuw'
-  const bothWays = s.right.recognize >= 1 && s.right.reverse >= 1
-  if (s.box >= 4 && (s.typedClean >= 2 || (s.sittings >= 2 && bothWays))) return 'geleerd'
-  if (s.box >= 3) return 'bijna'
+  const lastRight = s.last === 'correct' || s.last === 'hint'
+  if (lastRight && ((s.box >= 4 && s.typedClean >= 2) || (s.box >= 3 && s.sittings >= 2))) return 'geleerd'
+  if (s.box >= 2) return 'bijna'
   return 'oefenen'
 }
 
@@ -173,7 +181,7 @@ export function applyAnswer(
   s.last = outcome
 
   if (outcome === 'correct' || outcome === 'hint') {
-    // A new sitting: the first right answer, or 2+ hours after the previous one.
+    // A new moment: the first right answer, or 5+ minutes after the previous one.
     const newSitting = prev.lastRightAt === 0 || now - prev.lastRightAt >= SPACING_MS
     if (newSitting) s.sittings++
     s.lastRightAt = now

@@ -217,7 +217,7 @@ Fase 1 t/m 3 zijn gebouwd, fase 4 en 5 getest. Implementatienotities:
 
 ### Wijzigingen 4 oktober middag (Roeland)
 - Geen typvragen meer: alleen meerkeuze en zin met gat (engine-optie `typing`, standaard uit). Proeftoets is meerkeuze.
-- Geleerd zonder typen: doosje 4+, beide richtingen een keer goed, en goed op 2 aparte momenten (2+ uur ertussen). Boven doosje 3 alleen met een goed antwoord op een nieuw moment.
+- Geleerd zonder typen: 3 keer goed (doosje 3+), waarvan minstens één keer op een later moment (5+ minuten na een eerder goed antwoord), en het laatste antwoord goed. In de laatste week voor de toets komen woorden na 3 tot 5 minuten terug, zodat leren in één zitting kan. Boven doosje 3 alleen met een goed antwoord op een nieuw moment. Bij veel woorden die klaarstaan krijgen nieuwe woorden minder voorrang, en bijna-geleerde woorden komen eerst.
 - Voorlezen (TTS) helemaal uit: geen luidsprekerknoppen, geen automatisch voorlezen, geen instelling.
 - De uil heet Uilie en is een 3D-model (`public/models/uil.glb`, Meshy, textures verkleind).
 - Nieuwe meubels: kattenbed, bloempot, parasol, tafeltje. Eenmalig startpakket met een van elk meubel (behalve vuurtorentje). Kit Nugget slaapt in mand of bed.

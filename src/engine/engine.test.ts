@@ -220,6 +220,18 @@ describe('leitner', () => {
     }
   })
 
+  it('a word can be learned within one sitting, on two moments a few minutes apart', () => {
+    const M = 60_000
+    const toTest = 3 * DAY
+    let s = emptyState()
+    s = applyAnswer(s, 'recognize', 'correct', t0, toTest)
+    s = applyAnswer(s, 'reverse', 'correct', t0 + M, toTest)
+    expect(s.dueAt - (t0 + M)).toBe(3 * M) // close to the test: back within minutes
+    s = applyAnswer(s, 'sentence', 'correct', t0 + 4 * M, toTest)
+    s = applyAnswer(s, 'reverse', 'correct', t0 + 10 * M, toTest)
+    expect(statusOf(s)).toBe('geleerd')
+  })
+
   it('learns a word without typing: right on two separate moments, both ways', () => {
     const H = 3_600_000
     let s = emptyState()
@@ -227,16 +239,23 @@ describe('leitner', () => {
     s = applyAnswer(s, 'reverse', 'correct', t0 + 60_000, null)
     s = applyAnswer(s, 'sentence', 'correct', t0 + 120_000, null)
     expect(s.box).toBe(3)
-    expect(statusOf(s)).toBe('bijna')
+    expect(statusOf(s)).toBe('bijna') // three times right, but all on one moment
     // Same sitting again: no higher box.
     s = applyAnswer(s, 'reverse', 'correct', t0 + 180_000, null)
     expect(s.box).toBe(3)
     expect(statusOf(s)).toBe('bijna')
-    // Hours later, right again: learned.
+    // Later (5+ minutes, here hours), right again: learned.
     s = applyAnswer(s, 'reverse', 'correct', t0 + 3 * H, null)
     expect(s.box).toBe(4)
     expect(s.sittings).toBe(2)
     expect(statusOf(s)).toBe('geleerd')
+    // Three right answers spread over two moments is enough.
+    let q = emptyState()
+    q = applyAnswer(q, 'recognize', 'correct', t0, null)
+    q = applyAnswer(q, 'sentence', 'correct', t0 + 60_000, null)
+    expect(statusOf(q)).toBe('bijna')
+    q = applyAnswer(q, 'reverse', 'correct', t0 + 7 * 60_000, null)
+    expect(statusOf(q)).toBe('geleerd')
     s = applyAnswer(s, 'recognize', 'wrong', t0 + 4 * H, null)
     expect(statusOf(s)).toBe('oefenen')
   })

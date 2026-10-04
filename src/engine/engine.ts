@@ -122,7 +122,7 @@ export class WordEngine {
     const strong = free.filter((q) => known(this.state(q.word)) && !isDue(this.state(q.word), now, toTest))
 
     // 2. Roughly 60% due or weak, 25% new, 15% known; an empty pool passes its turn on.
-    const mix = this.mixFor(fresh.length, toTest)
+    const mix = this.mixFor(fresh.length, toTest, due.length)
     const r = this.rng.next()
     const order: PickReason[] =
       r < mix.due ? ['due', 'new', 'known'] : r < mix.due + mix.fresh ? ['new', 'due', 'known'] : ['known', 'due', 'new']
@@ -132,7 +132,8 @@ export class WordEngine {
         const q = weightedPick(this.rng, due, (x) => {
           const s = this.state(x.word)
           const overdue = Math.max(0, now - s.dueAt) / 3_600_000
-          return (6 - s.box) * (6 - s.box) + Math.min(overdue, 24) / 6 + (s.last === 'wrong' || s.last === 'almost' ? 6 : 0)
+          // Words almost learned come first: one more right answer grows the island.
+          return (6 - s.box) * (6 - s.box) + Math.min(overdue, 24) / 6 + (s.last === 'wrong' || s.last === 'almost' ? 6 : 0) + (statusOf(s) === 'bijna' ? 30 : 0)
         })
         return this.make(q, 'due')
       }
@@ -166,10 +167,13 @@ export class WordEngine {
    * Planned on two rounds of 12 a day. The rest stays repetition of missed and
    * due words, which is what makes them stick.
    */
-  mixFor(unseen: number, toTest: number | null): { due: number; fresh: number; known: number } {
+  mixFor(unseen: number, toTest: number | null, dueCount = 0): { due: number; fresh: number; known: number } {
     if (toTest === null || unseen === 0 || toTest > 14 * 86_400_000) return this.mix
     const daysLeft = Math.max(1, toTest / 86_400_000 - 1)
-    const needed = Math.min(0.85, Math.max(0.6, unseen / (daysLeft * 24)))
+    let needed = Math.min(0.85, Math.max(0.6, unseen / (daysLeft * 24)))
+    // Many words waiting to come back: first finish those, so they can be learned.
+    if (dueCount >= 8) needed = Math.min(needed, 0.45)
+    else if (dueCount >= 4) needed = Math.min(needed, 0.55)
     if (needed <= this.mix.fresh) return this.mix
     const rest = 1 - needed
     const scale = rest / (this.mix.due + this.mix.known)

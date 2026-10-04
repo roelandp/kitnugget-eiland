@@ -91,7 +91,7 @@ export function growthBar(app: App): HTMLElement {
     {},
     el('div.grow-label', {}, el('span', { text: '🏝️' }), el('span', { text: `Nog ${toGo} ${toGo === 1 ? 'woord' : 'woorden'} echt leren, dan groeit het eiland` })),
     el('div.grow-track', {}, fillEl),
-    almost > 0 ? el('div.grow-sub', { text: `${almost} ${almost === 1 ? 'woord is' : 'woorden zijn'} bijna geleerd. Doe ze straks of morgen nog eens goed!` }) : null,
+    almost > 0 ? el('div.grow-sub', { text: `${almost} ${almost === 1 ? 'woord is' : 'woorden zijn'} bijna geleerd. Doe ze straks nog eens goed!` }) : null,
   )
   // Grow into place, so a change after a round is visible.
   requestAnimationFrame(() => requestAnimationFrame(() => (fillEl.style.width = `${Math.round(fill * 100)}%`)))
