@@ -423,6 +423,8 @@ export class IslandScene {
         this.catHop = 0
         this.catSquash.scale.set(1, 1, 1)
         this.cat?.setWalking(false)
+        // Arrived: turn back to the viewer (three-quarter view), so he never stays with his back to Viggo.
+        if (alive()) this.cat?.face(-this.fwd.x + this.right.x * 0.45, -this.fwd.z + this.right.z * 0.45)
       }
     }
   }
