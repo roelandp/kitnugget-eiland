@@ -44,6 +44,10 @@ export function checkTyped(input: string, word: string): TypedCheck {
     if (letters >= 4 && editDistance(plainAnswer, target, 1) <= 1) return { result: 'almost', reason: 'typo' }
   }
 
+  // "spot drijven met" for "de spot drijven met": the expression without its article.
+  const exprArticle = /^(de|het) (.+ .+)$/.exec(full)
+  if (exprArticle && plainAnswer === plain(exprArticle[2])) return { result: 'almost', reason: 'article' }
+
   // Expressions: forgive a missing or doubled space.
   if (wordKind(full) === 'expression' && plainAnswer.replace(/ /g, '') === plain(full).replace(/ /g, '')) {
     return { result: 'almost', reason: 'typo' }

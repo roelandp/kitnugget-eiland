@@ -89,7 +89,8 @@ describe('checkTyped', () => {
   it('handles expressions', () => {
     expect(checkTyped('op de hak nemen', 'op de hak nemen').result).toBe('correct')
     expect(checkTyped('Op de hak nemen.', 'op de hak nemen').result).toBe('correct')
-    expect(checkTyped('spot drijven met', 'de spot drijven met').result).toBe('wrong')
+    expect(checkTyped('spot drijven met', 'de spot drijven met')).toEqual({ result: 'almost', reason: 'article' })
+    expect(checkTyped('drijven', 'de spot drijven met').result).toBe('wrong')
     expect(checkTyped('de spot drijven met', 'de spot drijven met').result).toBe('correct')
     expect(checkTyped('in trek zjin', 'in trek zijn').result).toBe('almost')
     expect(checkTyped('opde hak nemen', 'op de hak nemen').result).toBe('almost')

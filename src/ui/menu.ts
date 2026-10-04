@@ -4,6 +4,7 @@ import { goalDone, isAsleep, roundsToday } from '../game/day'
 import { wordsToNextStep } from '../game/island'
 import { inventoryChip, paws, testCountdown, watchInsets } from './common'
 import { el } from './dom'
+import { startRoaming } from './roam'
 
 export function menuScreen(app: App): Screen {
   const p = app.store.profile
@@ -83,5 +84,15 @@ export function menuScreen(app: App): Screen {
   }
 
   const unwatch = watchInsets(app, top, sheet)
-  return { root, dispose: unwatch }
+  let stopRoam: (() => void) | null = asleep ? null : startRoaming(app, { tiredSleep: true })
+  catcher.addEventListener('click', () => {
+    if (!stopRoam) window.setTimeout(() => (stopRoam = startRoaming(app, { tiredSleep: false })), 1600)
+  })
+  return {
+    root,
+    dispose: () => {
+      unwatch()
+      stopRoam?.()
+    },
+  }
 }

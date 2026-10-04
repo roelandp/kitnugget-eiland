@@ -56,8 +56,8 @@ export function instellingenScreen(app: App): Screen {
                 {
                   onclick: () => {
                     app.store.reset()
-                    app.syncIsland(false)
-                    app.go('menu')
+                    // A fresh start: reload so the island is small again.
+                    location.reload()
                   },
                 },
                 'Ja, wis alles',
