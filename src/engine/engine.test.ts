@@ -190,6 +190,9 @@ describe('leitner', () => {
   it('climbs the question types from easy to hard', () => {
     let s = emptyState()
     expect(typeFor(s, true, 0.5)).toBe('recognize')
+    expect(typeFor(applyAnswer(s, 'recognize', 'correct', t0, null), true, 0.5)).toBe('sentence') // known at first sight
+    s = applyAnswer(s, 'recognize', 'wrong', t0, null)
+    expect(typeFor(s, true, 0.5)).toBe('recognize')
     s = applyAnswer(s, 'recognize', 'correct', t0, null)
     expect(typeFor(s, true, 0.5)).toBe('reverse')
     s = applyAnswer(s, 'reverse', 'correct', t0, null)
@@ -284,6 +287,34 @@ describe('WordEngine', () => {
     const statuses = toets.questions.map((q) => e.status(q.word))
     expect(statuses.filter((s) => s === 'nieuw').length).toBeLessThanOrEqual(2)
     expect(statuses.filter((s) => s === 'geleerd').length).toBeGreaterThan(3)
+  })
+
+  it('shows new words faster when the test is close', () => {
+    const { e } = engine(1, new Date('2026-10-06T10:00:00').getTime())
+    const mix = e.mixFor(40, 2 * DAY)
+    expect(mix.fresh).toBeGreaterThan(0.5)
+    expect(mix.due + mix.fresh + mix.known).toBeCloseTo(1)
+    expect(e.mixFor(5, 10 * DAY).fresh).toBe(0.25)
+    expect(e.mixFor(40, null).fresh).toBe(0.25)
+  })
+
+  it('a child doing two rounds a day sees every word before the test', () => {
+    const { e, tick } = engine(33, new Date('2026-10-04T16:00:00').getTime())
+    const rng = makeRng(8)
+    // Sunday afternoon to Wednesday: the test is on Thursday morning.
+    for (let day = 0; day < 4; day++) {
+      for (let round = 0; round < 2; round++) {
+        for (let i = 0; i < 12; i++) {
+          const p = e.next()
+          e.record(p.q.word, p.type, rng.next() < 0.8 ? 'correct' : 'wrong')
+          tick(20_000)
+        }
+        tick(2 * 3_600_000)
+      }
+      tick(DAY - 4 * 3_600_000 - 24 * 20_000)
+    }
+    const unseen = toets.questions.filter((q) => e.state(q.word).seen === 0).length
+    expect(unseen).toBe(0)
   })
 
   it('restores from a snapshot', () => {

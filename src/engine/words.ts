@@ -168,6 +168,8 @@ export function applyAnswer(
     } else if (outcome === 'correct') {
       // Choice questions lift a word up to box 3 at most; the top boxes are earned by typing.
       if (s.box < 3) s.box = (s.box + 1) as Box
+      // Recognised right the very first time: the meaning is known, skip the reverse step.
+      if (prev.seen === 0 && type === 'recognize') s.right.reverse = Math.max(1, s.right.reverse)
     }
     s.dueAt = now + intervalMs(s.box, msToTest)
   } else if (outcome === 'almost') {

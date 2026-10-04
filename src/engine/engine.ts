@@ -118,9 +118,10 @@ export class WordEngine {
     const strong = free.filter((q) => known(this.state(q.word)))
 
     // 2. Roughly 60% due or weak, 25% new, 15% known; an empty pool passes its turn on.
+    const mix = this.mixFor(fresh.length, toTest)
     const r = this.rng.next()
     const order: PickReason[] =
-      r < this.mix.due ? ['due', 'new', 'known'] : r < this.mix.due + this.mix.fresh ? ['new', 'due', 'known'] : ['known', 'due', 'new']
+      r < mix.due ? ['due', 'new', 'known'] : r < mix.due + mix.fresh ? ['new', 'due', 'known'] : ['known', 'due', 'new']
     for (const reason of order) {
       if (reason === 'due' && due.length > 0) {
         // Lowest box and longest overdue first.
@@ -153,6 +154,21 @@ export class WordEngine {
       return (6 - s.box) * (6 - s.box) + Math.min(hours, 48) / 4
     })
     return this.make(q, 'fallback')
+  }
+
+  /**
+   * With the test close and many words never seen, new words get a bigger
+   * share, so every word comes by at least once before the test day. Planned
+   * on two rounds of 12 a day.
+   */
+  mixFor(unseen: number, toTest: number | null): { due: number; fresh: number; known: number } {
+    if (toTest === null || unseen === 0) return this.mix
+    const daysLeft = Math.max(1, toTest / 86_400_000 - 1)
+    const needed = Math.min(0.6, unseen / (daysLeft * 24))
+    if (needed <= this.mix.fresh) return this.mix
+    const rest = 1 - needed
+    const scale = rest / (this.mix.due + this.mix.known)
+    return { due: this.mix.due * scale, fresh: needed, known: this.mix.known * scale }
   }
 
   /** A pick for a given word, e.g. for the practice test. */

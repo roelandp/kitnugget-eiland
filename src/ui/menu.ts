@@ -1,5 +1,5 @@
 import type { App, Screen } from '../app'
-import { TOETSEN, formatDate } from '../content'
+import { TOETSEN, daysUntil, formatDate } from '../content'
 import { goalDone, isAsleep, roundsToday } from '../game/day'
 import { wordsToNextStep } from '../game/island'
 import { inventoryChip, paws, testCountdown, watchInsets } from './common'
@@ -44,6 +44,10 @@ export function menuScreen(app: App): Screen {
   const toNext = wordsToNextStep(app.learnedTotal())
   const info = [toets.title.replace(/^Toets \d+ \w+: /, ''), formatDate(toets.date) && `toets ${formatDate(toets.date)}`].filter(Boolean).join(' · ')
   lines.push(el('p.note', { html: `<strong>${countdown ?? info}</strong><br>${countdown ? info + '<br>' : ''}Nog ${toNext} ${toNext === 1 ? 'woord' : 'woorden'} leren en het eiland groeit.` }))
+  const left = daysUntil(toets.date)
+  if (left !== null && left >= 0 && left <= 3 && learned < total) {
+    lines.push(el('p.note', { text: 'Tip: doe ook eens de proeftoets, dan komen alle woorden langs.' }))
+  }
   const older = TOETSEN.filter((t) => t.id !== toets.id)
   if (older.length > 0) {
     lines.push(el('p.note.older', { text: `Andere toetsen: ${older.map((t) => t.title.replace(/:.*/, '')).join(', ')} (kies in Instellingen)` }))
