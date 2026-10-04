@@ -5,7 +5,7 @@ import { addItems, takeItem } from '../game/rewards'
 import { watchInsets } from './common'
 import { el } from './dom'
 import { startRoaming } from './roam'
-import { catMover } from './move'
+import { catMover, tapOnCat } from './move'
 
 const ERRORS: Record<PlaceError, string> = {
   buiten: 'Dat is in het water. Bouw op het eiland!',
@@ -92,7 +92,7 @@ export function bouwenScreen(app: App): Screen {
     } else if (tool === 'gum') {
       hint.textContent = 'Tik op een blok om het weg te halen.'
     } else {
-      hint.textContent = `${itemInfo(tool)?.naam}: tik op het eiland om het neer te zetten.`
+      hint.textContent = `${itemInfo(tool)?.naam}: tik op het eiland om het neer te zetten. Kit Nugget verplaatsen: tik op hem.`
     }
   }
 
@@ -103,6 +103,8 @@ export function bouwenScreen(app: App): Screen {
   }
 
   function tapAt(clientX: number, clientY: number): void {
+    // Kit Nugget always comes first: tap him (whatever is selected), then tap where he should go.
+    if ((mover.selected || tapOnCat(app, clientX, clientY)) && mover.tap(clientX, clientY)) return
     if (!tool) {
       // No block chosen: tap Kit Nugget, then a tile, and he walks there.
       // A tap on a piece of furniture turns it a quarter.

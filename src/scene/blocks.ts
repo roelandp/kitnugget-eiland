@@ -46,6 +46,9 @@ export class BlockLayer {
   private readonly geos: THREE.BufferGeometry[]
   private readonly mats: THREE.Material[]
   private readonly woodTex: THREE.CanvasTexture
+  /** All water blocks as one seamless body: no walls between neighbours, one surface. */
+  private readonly pond: THREE.Mesh
+  private readonly pondMat: THREE.MeshLambertMaterial
 
   constructor() {
     this.group.name = 'blocks'
@@ -73,6 +76,57 @@ export class BlockLayer {
       }),
     ]
     this.allocate(32)
+    this.pondMat = new THREE.MeshLambertMaterial({
+      vertexColors: true,
+      transparent: true,
+      opacity: 0.8,
+      depthWrite: false,
+      side: THREE.DoubleSide,
+    })
+    this.pond = new THREE.Mesh(new THREE.BufferGeometry(), this.pondMat)
+    this.pond.renderOrder = 2
+    this.pond.receiveShadow = true
+    this.group.add(this.pond)
+  }
+
+  /**
+   * Builds the water body: a top face per water block, and side faces only
+   * where the neighbour on that layer is not water, so a row of water blocks
+   * reads as one pond.
+   */
+  private rebuildPond(): void {
+    const water = new Set(this.blocks.filter((b) => b.type === 'water').map(bkey))
+    const pos: number[] = []
+    const col: number[] = []
+    const top = new THREE.Color('#a6def4')
+    const side = new THREE.Color('#7ec4e8')
+    const quad = (a: number[], b: number[], c: number[], d: number[], color: THREE.Color) => {
+      pos.push(...a, ...b, ...c, ...a, ...c, ...d)
+      for (let i = 0; i < 6; i++) col.push(color.r, color.g, color.b)
+    }
+    for (const b of this.blocks) {
+      if (b.type !== 'water') continue
+      const x0 = b.x
+      const x1 = b.x + 1
+      const z0 = b.z
+      const z1 = b.z + 1
+      const y0 = b.y
+      // A water block with water on top of it fills up to the next layer.
+      const y1 = water.has(bkey({ x: b.x, y: b.y + 1, z: b.z })) ? b.y + 1 : b.y + WATER_BLOCK_H
+      if (y1 < b.y + 1) quad([x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0], top)
+      const open = (dx: number, dz: number) => !water.has(bkey({ x: b.x + dx, y: b.y, z: b.z + dz }))
+      if (open(-1, 0)) quad([x0, y0, z0], [x0, y0, z1], [x0, y1, z1], [x0, y1, z0], side)
+      if (open(1, 0)) quad([x1, y0, z1], [x1, y0, z0], [x1, y1, z0], [x1, y1, z1], side)
+      if (open(0, -1)) quad([x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0], side)
+      if (open(0, 1)) quad([x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1], side)
+    }
+    const geo = new THREE.BufferGeometry()
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3))
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(col, 3))
+    geo.computeVertexNormals()
+    this.pond.geometry.dispose()
+    this.pond.geometry = geo
+    this.pond.visible = pos.length > 0
   }
 
   private allocate(cap: number): void {
@@ -130,6 +184,7 @@ export class BlockLayer {
       while (c < this.blocks.length) c *= 2
       this.allocate(c)
     }
+    this.rebuildPond()
     this.now = now
     this.write()
   }
@@ -205,7 +260,7 @@ export class BlockLayer {
           this.wood.setMatrixAt(nw++, m)
           break
         case 'water':
-          this.water.setMatrixAt(nwa++, m)
+          // Drawn as one seamless pond, see rebuildPond.
           break
       }
     }
@@ -221,6 +276,8 @@ export class BlockLayer {
     for (const g of this.geos) g.dispose()
     for (const m of this.mats) m.dispose()
     this.woodTex.dispose()
+    this.pond.geometry.dispose()
+    this.pondMat.dispose()
     for (const mesh of [this.plain, this.caps, this.dots, this.wood, this.water]) mesh.dispose()
   }
 }

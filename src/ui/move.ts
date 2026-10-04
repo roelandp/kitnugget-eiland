@@ -15,7 +15,7 @@ export function tapOnCat(app: App, clientX: number, clientY: number): boolean {
  * Tap Kit Nugget, then tap a tile: he walks there. Returns a tap handler that
  * says whether it used the tap, and a cleanup function.
  */
-export function catMover(app: App, parent: HTMLElement): { tap: (x: number, y: number) => boolean; dispose: () => void } {
+export function catMover(app: App, parent: HTMLElement): { tap: (x: number, y: number) => boolean; readonly selected: boolean; dispose: () => void } {
   let selected = false
   const bubble = el('div.move-hint.bubble.hidden', { text: 'Tik op het eiland: waar moet Kit Nugget heen?' })
   parent.appendChild(bubble)
@@ -46,7 +46,7 @@ export function catMover(app: App, parent: HTMLElement): { tap: (x: number, y: n
     return true
   }
 
-  return { tap, dispose: () => bubble.remove() }
+  return { tap, get selected() { return selected }, dispose: () => bubble.remove() }
 }
 
 /** Listens for short taps on the scene (not drags or pinches). */
