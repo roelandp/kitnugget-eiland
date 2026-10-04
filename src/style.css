@@ -597,6 +597,7 @@ input {
 }
 
 .learn .answer .x {
+  font-feature-settings: 'calt' 1, 'liga' 1, 'ss01' 1, 'ss04' 1;
   color: var(--accent-deep);
   background: var(--accent-soft);
   border-radius: 6px;
@@ -1288,7 +1289,11 @@ input {
 .hint-box:not(.letters) {
   font-family: 'Schoolschrift', ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif;
   font-weight: 400;
-  letter-spacing: 0.01em;
+  /* Joined-up school handwriting: any letter-spacing would break the joins. */
+  letter-spacing: 0;
+  font-variant-ligatures: common-ligatures contextual;
+  font-feature-settings: 'calt' 1, 'liga' 1, 'ss01' 1, 'ss04' 1;
+  font-kerning: normal;
 }
 
 .q-prompt {
@@ -1300,12 +1305,6 @@ input {
 .q-prompt.word {
   font-size: clamp(40px, 5vw + 18px, 62px);
   color: #4a2a12;
-  -webkit-text-stroke: 0.6px currentColor;
-}
-
-.q-prompt,
-.learn .answer {
-  -webkit-text-stroke: 0.4px currentColor;
 }
 
 .q-prompt.long {

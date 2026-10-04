@@ -99,6 +99,42 @@ export class CatDresser {
     return entry
   }
 
+  /**
+   * Only the hats and accessories, laid out around a virtual head (top of the
+   * head at (0.5, 0.6) of the canvas, head half the canvas wide), for 3D avatars.
+   */
+  accessoryCanvas(): HTMLCanvasElement | null {
+    if (this.current.hats.length === 0) return null
+    const size = 512
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return null
+    const headW = size * 0.5
+    for (const id of this.current.hats) {
+      const hat = hatById(id)
+      if (!hat) continue
+      ctx.save()
+      // The face sits a third of a head below the top of the head.
+      ctx.translate(size / 2, size * 0.6 + (hat.mount === 'face' ? headW * 0.42 : 0))
+      ctx.rotate((hat.rot * Math.PI) / 180)
+      ctx.translate(hat.dx * headW, hat.dy * headW)
+      const w = headW * hat.scale
+      if (hat.source === 'draw') {
+        DRAWN_HATS[hat.id]?.(ctx, w)
+      } else {
+        const img = this.hatImage(hat.id)
+        if (img) {
+          const h = (w * img.naturalHeight) / img.naturalWidth
+          ctx.drawImage(img, -w / 2, hat.mount === 'face' ? -h / 2 : -h * 0.82, w, h)
+        }
+      }
+      ctx.restore()
+    }
+    return canvas
+  }
+
   /** The pose as a trimmed PNG for plain `<img>` use. Null while the art loads. */
   dataUrl(sprite: string): string | null {
     const d = this.dressed(sprite)

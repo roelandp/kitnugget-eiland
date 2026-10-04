@@ -104,7 +104,7 @@ export class App {
       // The avatar loads asynchronously; read the kind once it settled.
       void real.ready.then(() => {
         ;(this as { sceneKind: string }).sceneKind = real.catKind
-        this.pushLook()
+        this.applyLook()
       })
     } catch (err) {
       console.warn('Geen WebGL, het spel draait zonder eiland', err)
@@ -126,10 +126,40 @@ export class App {
     }
     for (const type of gestures) document.addEventListener(type, kick)
 
+    this.listenForSwipes()
+
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') this.scene.pause()
       else if (!this.held) this.scene.resume()
     })
+  }
+
+  /**
+   * A horizontal swipe over the island turns it a quarter, on every screen,
+   * also during a round. Pinches and slow drags are left alone.
+   */
+  private listenForSwipes(): void {
+    const active = new Map<number, { x: number; y: number; t: number }>()
+    let multi = false
+    this.stage.addEventListener('pointerdown', (e) => {
+      active.set(e.pointerId, { x: e.clientX, y: e.clientY, t: performance.now() })
+      if (active.size > 1) multi = true
+    })
+    const end = (e: PointerEvent) => {
+      const start = active.get(e.pointerId)
+      active.delete(e.pointerId)
+      const wasMulti = multi
+      if (active.size === 0) multi = false
+      if (!start || wasMulti || e.type === 'pointercancel') return
+      const dx = e.clientX - start.x
+      const dy = e.clientY - start.y
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.4 && performance.now() - start.t < 800) {
+        this.audio.play('tap')
+        this.scene.rotate(dx > 0 ? -1 : 1)
+      }
+    }
+    window.addEventListener('pointerup', end)
+    window.addEventListener('pointercancel', end)
   }
 
   register(id: ScreenId, factory: ScreenFactory): void {
@@ -234,6 +264,10 @@ export class App {
 
   // ---------- dressing up ----------
 
+  get is3d(): boolean {
+    return this.sceneKind === 'glb' || this.sceneKind === 'primitive'
+  }
+
   lookProgress(): LookProgress {
     const p = this.store.profile
     return { learned: this.learnedTotal(), rounds: p.stats.rounds, days: p.days.played, fed: p.stats.fed }
@@ -241,12 +275,18 @@ export class App {
 
   /** Applies the stored outfit (minus anything not unlocked) to the scene. */
   applyLook(): void {
-    const look = sanitiseLook(this.store.profile.look, this.lookProgress())
+    let look = sanitiseLook(this.store.profile.look, this.lookProgress())
+    // The 3D Kit Nugget wears hats only; capes and fur patterns are painted on the picture version.
+    if (this.is3d) look = { ...look, cape: null, pattern: null }
     this.dresser.setLook(look)
     this.pushLook()
   }
 
   private pushLook(): void {
+    if (this.sceneKind === 'glb' || this.sceneKind === 'primitive') {
+      ;(this.scene as unknown as { setCatAccessories?: (c: HTMLCanvasElement | null) => void }).setCatAccessories?.(this.dresser.accessoryCanvas())
+      return
+    }
     const set = (this.scene as unknown as { setCatImage?: (pose: string, c: HTMLCanvasElement | null, inset?: { x: number; y: number; w: number; h: number }) => void }).setCatImage
     if (!set) return
     for (const [pose, sprite] of Object.entries(POSE_SPRITE)) {

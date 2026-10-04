@@ -178,9 +178,8 @@ export function bouwenScreen(app: App): Screen {
     const dx = p.x - p.sx
     const dy = p.y - p.sy
     const dt = performance.now() - p.t
-    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5 && dt < 700) {
-      turn(dx > 0 ? -1 : 1)
-    } else if (Math.hypot(dx, dy) < 12) {
+    // Swipes are turned into quarter turns by the app itself, on every screen.
+    if (Math.hypot(dx, dy) < 12 && dt < 600) {
       tapAt(e.clientX, e.clientY)
     }
   }

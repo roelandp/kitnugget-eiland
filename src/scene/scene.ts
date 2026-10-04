@@ -433,6 +433,11 @@ export class IslandScene {
     return { x: this.catTile.x, z: this.catTile.z }
   }
 
+  /** Dress-up for 3D avatars: hats as a picture on the head. */
+  setCatAccessories(canvas: HTMLCanvasElement | null): void {
+    this.cat?.setAccessories?.(canvas)
+  }
+
   /** Dress-up: replace the sprite art of one pose (sprite avatar only; no-op otherwise). */
   setCatImage(pose: CatPose, source: HTMLCanvasElement | null, inset?: ImageInset): void {
     this.cat?.setImage?.(pose, source, inset)

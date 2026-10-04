@@ -34,7 +34,14 @@ export interface CatAvatar {
   setTint(c: THREE.Color): void
   /** Sprite avatar only: replace one pose's art with a composed canvas (dress-up). */
   setImage?(pose: CatPose, source: HTMLCanvasElement | null, inset?: ImageInset): void
+  /** 3D avatars: hats and accessories as a camera-facing picture on the head (see ACCESSORY_* in dressup). */
+  setAccessories?(canvas: HTMLCanvasElement | null): void
 }
+
+/** Accessory canvas layout, shared with dressup.ts: the head top sits at (0.5, ANCHOR_Y), the head is HEAD_W wide. */
+export const ACCESSORY_ANCHOR_Y = 0.6
+export const ACCESSORY_HEAD_W = 0.5
+const _acc = new THREE.Vector3()
 
 export async function loadCat(base: string, tryGlb = true): Promise<CatAvatar> {
   let force = ''
@@ -397,10 +404,55 @@ abstract class Cat3D implements CatAvatar {
   protected targetYaw = Math.PI / 4
   protected poseT = 0
   protected baseHeight = 1
+  /** Top of the head between the ears, in poseGroup space. */
+  protected headTop = new THREE.Vector3(0, 0.95, 0.12)
+  /** Head width in world units, for sizing hats. */
+  protected headWidth = 0.42
+  private accessory: THREE.Sprite | null = null
 
   constructor() {
     this.object.name = 'kit-nugget'
     this.object.add(this.poseGroup)
+  }
+
+  setAccessories(canvas: HTMLCanvasElement | null): void {
+    if (!canvas) {
+      if (this.accessory) {
+        this.accessory.removeFromParent()
+        this.accessory.material.map?.dispose()
+        this.accessory.material.dispose()
+        this.accessory = null
+      }
+      return
+    }
+    const tex = new THREE.CanvasTexture(canvas)
+    tex.colorSpace = THREE.SRGBColorSpace
+    if (!this.accessory) {
+      const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false })
+      this.accessory = new THREE.Sprite(mat)
+      this.accessory.renderOrder = 5
+      this.poseGroup.add(this.accessory)
+    } else {
+      this.accessory.material.map?.dispose()
+      this.accessory.material.map = tex
+      this.accessory.material.needsUpdate = true
+    }
+    const size = this.headWidth / ACCESSORY_HEAD_W
+    this.accessory.scale.set(size, size * (canvas.height / canvas.width), 1)
+    // The canvas centre lies above the anchor by (ANCHOR_Y - 0.5) of its height.
+    this.accessory.center.set(0.5, 1 - ACCESSORY_ANCHOR_Y)
+  }
+
+  /** Keeps the accessory on the head and a little towards the camera, so the head never covers it. */
+  protected updateAccessory(): void {
+    const a = this.accessory
+    if (!a) return
+    a.visible = this.pose !== 'sleep'
+    if (!this.camera || !a.visible) return
+    this.camera.getWorldDirection(_acc).negate()
+    // Into the cat's own frame (it only turns around Y).
+    _acc.applyAxisAngle(THREE.Object3D.DEFAULT_UP, -this.object.rotation.y)
+    a.position.copy(this.headTop).addScaledVector(_acc, this.headWidth * 0.75)
   }
 
   get height(): number {
@@ -657,11 +709,43 @@ class GlbCat extends Cat3D {
     this.baseHeight = 1.0
     this.model = normalizeModel(scene, 1.0)
     this.poseGroup.add(this.model)
+    this.measureHead()
     if (clips.length) {
       this.mixer = new THREE.AnimationMixer(this.model)
       for (const clip of clips) this.actions.set(clip.name.toLowerCase(), this.mixer.clipAction(clip))
       this.play(['idle', 'stand', 'breath'])
     }
+  }
+
+  /** Finds the top of the head between the ears from the mesh itself. */
+  private measureHead(): void {
+    this.model.updateMatrixWorld(true)
+    const pts: THREE.Vector3[] = []
+    let maxY = -Infinity
+    const v = new THREE.Vector3()
+    this.model.traverse((o) => {
+      const m = o as THREE.Mesh
+      if (!m.isMesh) return
+      const pos = m.geometry.getAttribute('position')
+      const step = Math.max(1, Math.floor(pos.count / 6000))
+      for (let i = 0; i < pos.count; i += step) {
+        v.fromBufferAttribute(pos, i).applyMatrix4(m.matrixWorld)
+        pts.push(v.clone())
+        if (v.y > maxY) maxY = v.y
+      }
+    })
+    if (!pts.length) return
+    // The ears are the highest points; the band just below holds the skull.
+    const band = pts.filter((p) => p.y > maxY * 0.8)
+    const c = band.reduce((acc, p) => acc.add(p), new THREE.Vector3()).multiplyScalar(1 / band.length)
+    let minX = Infinity
+    let maxX = -Infinity
+    for (const p of band) {
+      minX = Math.min(minX, p.x)
+      maxX = Math.max(maxX, p.x)
+    }
+    this.headTop.set(c.x, maxY * 0.9, c.z)
+    this.headWidth = Math.max(0.25, Math.min(0.6, (maxX - minX) * 0.9))
   }
 
   private play(names: string[]): void {
@@ -687,6 +771,7 @@ class GlbCat extends Cat3D {
   update(dt: number, t: number): void {
     this.updatePose(dt, t)
     this.mixer?.update(dt)
+    this.updateAccessory()
   }
 
   dispose(): void {

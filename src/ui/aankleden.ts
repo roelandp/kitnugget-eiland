@@ -35,14 +35,14 @@ export function aankledenScreen(app: App): Screen {
   function render(): void {
     const url = app.dresser.dataUrl('beg')
     if (url) preview.src = url
-    sections.replaceChildren(
+    const panels: (HTMLElement | null)[] = [
       el('div.card.panel', {}, el('h2', { text: 'Hoedjes en meer' }), el('p.tiny', { text: 'Je mag er meer tegelijk kiezen.' }), el('div.dress-row', {}, ...HATS.map((h) =>
         chip(h.naam, look.hats.includes(h.id), h.unlock, () => {
           look = { ...look, hats: look.hats.includes(h.id) ? look.hats.filter((x) => x !== h.id) : [...look.hats, h.id] }
           save()
         }),
       ))),
-      el('div.card.panel', {}, el('h2', { text: 'Cape' }), el('div.dress-row', {},
+      app.is3d ? null : el('div.card.panel', {}, el('h2', { text: 'Cape' }), el('div.dress-row', {},
         chip('Geen', look.cape === null, { kind: 'rounds', at: 0 }, () => {
           look = { ...look, cape: null }
           save()
@@ -54,7 +54,7 @@ export function aankledenScreen(app: App): Screen {
           }),
         ),
       )),
-      el('div.card.panel', {}, el('h2', { text: 'Vachtje' }), el('div.dress-row', {},
+      app.is3d ? null : el('div.card.panel', {}, el('h2', { text: 'Vachtje' }), el('div.dress-row', {},
         chip('Gewoon', look.pattern === null, { kind: 'rounds', at: 0 }, () => {
           look = { ...look, pattern: null }
           save()
@@ -66,7 +66,8 @@ export function aankledenScreen(app: App): Screen {
           }),
         ),
       )),
-    )
+    ]
+    sections.replaceChildren(...panels.filter((x): x is HTMLElement => x !== null))
   }
 
   const unsub = app.dresser.subscribe(() => {
