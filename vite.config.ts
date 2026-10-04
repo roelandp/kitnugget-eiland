@@ -1,13 +1,20 @@
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { existsSync, readdirSync } from 'node:fs'
 
 // Build stamp so the running app can tell whether it is on the newest code.
 const BUILD_ID = new Date().toISOString()
+
+// Optional 3D scans in public/models (kit-nugget.glb, eend.glb, ...): only the ones that exist get loaded.
+const MODELS = existsSync('public/models')
+  ? readdirSync('public/models').filter((f) => f.endsWith('.glb')).map((f) => f.replace(/\.glb$/, ''))
+  : []
 
 export default defineConfig({
   base: './',
   define: {
     __BUILD_ID__: JSON.stringify(BUILD_ID),
+    __MODELS__: JSON.stringify(MODELS),
   },
   build: {
     target: 'es2020',

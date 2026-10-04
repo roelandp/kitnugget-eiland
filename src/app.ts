@@ -90,13 +90,14 @@ export class App {
     let scene: SceneApi
     let kind = 'geen 3D'
     try {
-      const real = new IslandScene(this.stage, { base: this.base })
+      const real = new IslandScene(this.stage, { base: this.base, models: __MODELS__ })
       scene = real
       kind = 'laden'
       // The avatar loads asynchronously; read the kind once it settled.
-      window.setTimeout(() => {
-        ;(this as { sceneKind: string }).sceneKind = String((real as unknown as { catKind?: string }).catKind ?? 'sprite')
-      }, 3000)
+      void real.ready.then(() => {
+        ;(this as { sceneKind: string }).sceneKind = real.catKind
+        this.pushLook()
+      })
     } catch (err) {
       console.warn('Geen WebGL, het spel draait zonder eiland', err)
       scene = nullScene()
