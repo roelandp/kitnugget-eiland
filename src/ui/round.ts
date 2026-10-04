@@ -1,0 +1,402 @@
+import type { App, Screen } from '../app'
+import { animalById } from '../content/animals'
+import type { ItemId } from '../content/blocks'
+import type { Question } from '../content/types'
+import { checkTyped, type AlmostReason } from '../engine/answer'
+import type { Pick } from '../engine/engine'
+import { makeRng } from '../engine/rng'
+import { diffMarks, gapForm, letterHint, splitArticle } from '../engine/text'
+import type { Outcome } from '../engine/words'
+import { finishRound } from '../game/day'
+import { addItems, nextStreak, rewardFor } from '../game/rewards'
+import { inventoryChip, sleep, speakButton, updateInventoryChip, watchInsets } from './common'
+import { el } from './dom'
+
+export const ROUND_LENGTH = 12
+
+export interface RoundResult {
+  earned: ItemId[]
+  learned: string[]
+  weak: string[]
+  right: number
+  total: number
+}
+
+const KIND_LABEL: Record<Pick['type'], string> = {
+  recognize: 'Welk woord hoort bij deze betekenis?',
+  reverse: 'Wat betekent dit woord?',
+  sentence: 'Welk woord past in de zin?',
+  type: 'Typ het woord dat hierbij hoort',
+}
+
+export function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c)
+}
+
+function pickLine(lines: string[], word?: string): string {
+  const line = lines[Math.floor(Math.random() * lines.length)] ?? ''
+  return line.replace('{woord}', word ? `"${word}"` : 'dit woord')
+}
+
+/** The correct word with the letters that went wrong highlighted. */
+export function markedWord(answer: string, word: string): HTMLElement {
+  const wrap = el('div.answer')
+  // Compare against the form the player aimed at: with article if they typed one.
+  const { article } = splitArticle(word)
+  const typedArticle = /^(de|het|een)\s/i.test(answer.trim())
+  const target = article && !typedArticle ? gapForm(word) : word
+  const marks = answer.trim() ? diffMarks(answer.trim(), target) : [...target].map((ch) => ({ ch, ok: true }))
+  for (const m of marks) {
+    if (m.ok) wrap.appendChild(document.createTextNode(m.ch))
+    else wrap.appendChild(el('span.x', { text: m.ch }))
+  }
+  return wrap
+}
+
+const ALMOST_TEXT: Record<AlmostReason, string> = {
+  article: 'Bijna goed! Let op het lidwoord.',
+  accent: 'Bijna goed! Let op de puntjes of het streepje.',
+  typo: 'Bijna goed! Er is één letter anders.',
+}
+
+export function roundScreen(app: App): Screen {
+  const engine = app.makeEngine()
+  const rng = makeRng(Date.now() & 0x7fffffff)
+  const earned: ItemId[] = []
+  const learned: string[] = []
+  const asked = new Set<string>()
+  let index = 0
+  let right = 0
+  let streak = 0
+  let disposed = false
+  let leaving: Promise<void> = Promise.resolve()
+
+  app.scene.setMood('day')
+  app.scene.catPose('idle')
+
+  const dots = el('div.progress')
+  for (let i = 0; i < ROUND_LENGTH; i++) dots.appendChild(el('i'))
+  const streakChip = el('div.chip.hidden')
+  const invChip = inventoryChip(app.store.profile.inventory)
+  const top = el(
+    'div.topbar',
+    {},
+    el('button.btn.small.ghost', { onclick: () => app.go('menu') }, '✕ Stoppen'),
+    dots,
+    el('div.spacer'),
+    streakChip,
+    invChip,
+  )
+  const card = el('div.card.sheet')
+  const root = el('div.screen', {}, top, el('div.spacer'), card)
+  const unwatch = watchInsets(app, top, card)
+
+  function updateTop(): void {
+    ;[...dots.children].forEach((d, i) => {
+      d.className = i < index ? 'done' : i === index ? 'now' : ''
+    })
+    streakChip.classList.toggle('hidden', streak < 2)
+    streakChip.textContent = `⭐ ${streak} op een rij`
+    updateInventoryChip(invChip, app.store.profile.inventory)
+  }
+
+  function record(q: Question, type: Pick['type'], outcome: Outcome): ItemId[] {
+    const { before, after } = engine.record(q.word, type, outcome)
+    asked.add(q.word)
+    if (after === 'geleerd' && before !== 'geleerd' && !learned.includes(q.word)) learned.push(q.word)
+    if (outcome === 'correct' || outcome === 'hint') right++
+    streak = nextStreak(streak, outcome)
+    const items = rewardFor(type, outcome, streak, rng)
+    earned.push(...items)
+    app.saveEngine(engine)
+    app.store.update((p) => {
+      p.inventory = addItems(p.inventory, items)
+      p.stats.answers++
+    })
+    return items
+  }
+
+  async function celebrate(items: ItemId[], outcome: Outcome): Promise<void> {
+    app.audio.play('right')
+    app.scene.catJump()
+    app.scene.animalState('happy')
+    app.scene.burst('sparkle', 'cat')
+    if (streak > 0 && streak % 5 === 0 && (outcome === 'correct' || outcome === 'hint')) {
+      app.audio.play('streak', streak)
+      app.toast(`${streak} op een rij! Een meubelstuk voor het eiland!`)
+      app.scene.burst('stars', 'cat')
+    } else if (streak > 0 && streak % 3 === 0 && (outcome === 'correct' || outcome === 'hint')) {
+      app.audio.play('streak', streak)
+      app.toast(`${streak} op een rij! Een vissnoepje voor Kit Nugget!`)
+    }
+    window.setTimeout(() => app.audio.play('reward'), 350)
+    await app.flyRewards(items, invChip)
+    updateTop()
+  }
+
+  function finish(): void {
+    app.store.update((p) => {
+      p.days = finishRound(p.days, Date.now())
+      p.stats.rounds++
+    })
+    const result: RoundResult = {
+      earned,
+      learned,
+      weak: engine.weakest(3, [...asked]).map((q) => q.word),
+      right,
+      total: ROUND_LENGTH,
+    }
+    app.go('result', result)
+  }
+
+  async function next(): Promise<void> {
+    if (disposed) return
+    if (index >= ROUND_LENGTH) {
+      finish()
+      return
+    }
+    updateTop()
+    const pick = engine.next()
+    const animal = animalById(app.nextAnimal())
+    currentAnimal = animal
+    showQuestion(pick, animal.naam, pickLine(pick.type === 'reverse' ? animal.askWord : animal.ask, pick.q.word))
+    await leaving
+    if (disposed) return
+    app.scene.catPose('idle')
+    void app.scene.animalArrives(animal.id).then(() => {
+      if (!disposed) app.scene.animalState('talk')
+    })
+  }
+
+  let currentAnimal = animalById(app.nextAnimal())
+
+  async function done(): Promise<void> {
+    await sleep(1300)
+    if (disposed) return
+    index++
+    leaving = app.scene.animalLeaves()
+    void next()
+  }
+
+  function promptFor(pick: Pick): HTMLElement {
+    const q = pick.q
+    if (pick.type === 'reverse') return el('div.q-prompt.word', { text: q.word })
+    if (pick.type === 'sentence' && q.sentence) {
+      const [a, b] = q.sentence.split('___')
+      return el('div.q-prompt', { html: `${escapeHtml(a)}<span class="gap">&nbsp;</span>${escapeHtml(b ?? '')}` })
+    }
+    return el('div.q-prompt', { text: q.definition })
+  }
+
+  function speakTextFor(pick: Pick): string {
+    if (pick.type === 'reverse') return pick.q.word
+    if (pick.type === 'sentence' && pick.q.sentence) return pick.q.sentence.replace('___', '... hm ...')
+    return pick.q.definition
+  }
+
+  function showQuestion(pick: Pick, who: string, line: string): void {
+    card.replaceChildren()
+    const head = el('div.q-head', {}, el('div.q-who', { text: `${who}: "${line}"` }), speakButton(app, () => speakTextFor(pick)))
+    const prompt = promptFor(pick)
+    const feedback = el('div.feedback')
+    const learnBox = el('div.learn.hidden')
+    const body = pick.type === 'type' ? typeBody(pick, feedback, learnBox) : choiceBody(pick, prompt, feedback, learnBox)
+    card.append(el('div.sheet-scroll', {}, head, el('div.q-kind', { text: KIND_LABEL[pick.type] }), prompt, learnBox, feedback, body))
+  }
+
+  function showLearn(learnBox: HTMLElement, q: Question, answer: string, label: string): void {
+    learnBox.replaceChildren(
+      el('div.label', { text: label }),
+      markedWord(answer, q.word),
+      el('div.def', { text: q.definition }),
+    )
+    learnBox.classList.remove('hidden')
+    app.say(`${q.word}. ${q.definition}`)
+  }
+
+  function fillGap(prompt: HTMLElement, q: Question): void {
+    const gap = prompt.querySelector('.gap')
+    if (gap) gap.textContent = gapForm(q.word)
+  }
+
+  function choiceBody(pick: Pick, prompt: HTMLElement, feedback: HTMLElement, learnBox: HTMLElement): HTMLElement {
+    const opts = pick.options!
+    const long = pick.type === 'reverse'
+    const wrap = el(`div.options${long ? '.long' : ''}`)
+    let state: 'ask' | 'learn' | 'done' = 'ask'
+    const buttons = opts.labels.map((label, i) =>
+      el('button.opt', {
+        text: label,
+        onclick: () => choose(i),
+      }),
+    )
+    wrap.append(...buttons)
+
+    function choose(i: number): void {
+      if (state === 'done') return
+      app.audio.play('tap')
+      const isRight = i === opts.answer
+      if (state === 'ask') {
+        if (isRight) {
+          state = 'done'
+          buttons[i].classList.add('right')
+          buttons.forEach((b, k) => k !== i && b.classList.add('dim'))
+          if (pick.type === 'sentence') fillGap(prompt, pick.q)
+          feedback.textContent = pickLine(currentAnimal.happy)
+          const items = record(pick.q, pick.type, 'correct')
+          void celebrate(items, 'correct')
+          void done()
+        } else {
+          state = 'learn'
+          record(pick.q, pick.type, 'wrong')
+          buttons[i].classList.add('tried')
+          buttons[opts.answer].classList.add('show')
+          buttons.forEach((b, k) => k !== i && k !== opts.answer && b.classList.add('dim'))
+          app.audio.play('wrong')
+          app.scene.catSurprised()
+          app.scene.animalState('idle')
+          showLearn(learnBox, pick.q, '', 'Het goede antwoord is')
+          feedback.textContent = ''
+          wrap.before(el('p.note', { text: 'Tik nu op het goede antwoord.' }))
+          updateTop()
+        }
+        return
+      }
+      // Learning: only the right one moves on, a mis-tap just gets a soft tap.
+      if (isRight) {
+        state = 'done'
+        buttons[i].classList.remove('show')
+        buttons[i].classList.add('right')
+        if (pick.type === 'sentence') fillGap(prompt, pick.q)
+        feedback.textContent = pickLine(currentAnimal.learn)
+        app.scene.catPose('idle')
+        app.scene.animalState('happy')
+        app.audio.play('reward')
+        void done()
+      }
+    }
+    return wrap
+  }
+
+  function typeBody(pick: Pick, feedback: HTMLElement, learnBox: HTMLElement): HTMLElement {
+    const q = pick.q
+    let hints = 0
+    let state: 'ask' | 'learn' | 'done' = 'ask'
+    let retries = 0
+    const input = el('input.type-input', {
+      type: 'text',
+      autocomplete: 'off',
+      autocorrect: 'off',
+      autocapitalize: 'none',
+      spellcheck: 'false',
+      enterkeyhint: 'done',
+      placeholder: 'Typ hier...',
+      'aria-label': 'Jouw antwoord',
+    }) as HTMLInputElement
+    const ok = el('button.btn.green', { type: 'submit' }, 'Klaar')
+    const form = el('form.type-row', {}, input, ok)
+    const hintBtn = el('button.btn.small.lila', { type: 'button' }, '💡 Hint')
+    const hintBox = el('div.hint-box.hidden')
+    const skip = el('button.btn.small.hidden', { type: 'button' }, 'Verder')
+    const hintRow = el('div.hint-row', {}, hintBtn, hintBox, skip)
+    const wrap = el('div', {}, form, hintRow)
+
+    hintBtn.addEventListener('click', () => {
+      if (state !== 'ask' || hints >= 2) return
+      hints++
+      app.audio.play('tap')
+      hintBox.classList.remove('hidden')
+      if (hints === 1 && q.hint) {
+        hintBox.textContent = q.hint
+      } else {
+        hintBox.classList.add('letters')
+        hintBox.textContent = letterHint(q.word, hints === 1 ? 2 : 3)
+      }
+      hintBtn.textContent = hints >= 2 ? '💡 Geen hints meer' : '💡 Nog een hint'
+      if (hints >= 2) hintBtn.setAttribute('disabled', 'true')
+      input.focus()
+    })
+
+    skip.addEventListener('click', () => {
+      if (state === 'done') return
+      state = 'done'
+      app.scene.catPose('idle')
+      void done()
+    })
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault()
+      const value = input.value
+      if (state === 'done' || value.trim() === '') {
+        input.focus()
+        return
+      }
+      const check = checkTyped(value, q.word)
+      if (state === 'ask') {
+        if (check.result === 'correct') {
+          state = 'done'
+          const outcome: Outcome = hints > 0 ? 'hint' : 'correct'
+          input.classList.add('good')
+          input.blur()
+          feedback.textContent = pickLine(currentAnimal.happy)
+          hintRow.classList.add('hidden')
+          const items = record(q, 'type', outcome)
+          void celebrate(items, outcome)
+          void done()
+          return
+        }
+        state = 'learn'
+        const outcome: Outcome = check.result === 'almost' ? 'almost' : 'wrong'
+        const items = record(q, 'type', outcome)
+        hintBtn.classList.add('hidden')
+        hintBox.classList.add('hidden')
+        if (outcome === 'almost') {
+          app.audio.play('tap')
+          app.scene.animalState('idle')
+          showLearn(learnBox, q, value, ALMOST_TEXT[check.reason ?? 'typo'])
+          void app.flyRewards(items, invChip).then(updateTop)
+        } else {
+          app.audio.play('wrong')
+          app.scene.catSurprised()
+          app.scene.animalState('idle')
+          showLearn(learnBox, q, value, 'Het goede woord is')
+        }
+        feedback.textContent = ''
+        input.value = ''
+        input.placeholder = 'Typ het goede woord'
+        updateTop()
+        input.focus()
+        return
+      }
+      // Learning: type it once the right way.
+      if (check.result === 'correct') {
+        state = 'done'
+        input.classList.add('good')
+        input.blur()
+        feedback.textContent = pickLine(currentAnimal.learn)
+        app.scene.catPose('idle')
+        app.scene.animalState('happy')
+        app.audio.play('reward')
+        void done()
+      } else {
+        retries++
+        input.value = ''
+        app.audio.play('tap')
+        input.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-6px)' }, { transform: 'translateX(6px)' }, { transform: 'translateX(0)' }], { duration: 260 })
+        if (retries >= 2) skip.classList.remove('hidden')
+        input.focus()
+      }
+    })
+    return wrap
+  }
+
+  void next()
+
+  return {
+    root,
+    dispose: () => {
+      disposed = true
+      unwatch()
+    },
+  }
+}
