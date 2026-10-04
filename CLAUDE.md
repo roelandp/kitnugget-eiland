@@ -201,3 +201,16 @@ Rapporteer aan het eind van elke fase: wat af is, wat op een fallback draait, de
 ## Niet nu
 
 Meerdere profielen in de UI, tweespelermodus, accounts, server, sync, analytics, en eigen woordenlijsten invoeren in de app.
+
+## Stand van zaken (4 oktober 2026)
+
+Live: https://roelandp.github.io/kitnugget-eiland/ (GitHub Pages via Actions; Pages staat op "GitHub Actions" als bron).
+
+Fase 1 t/m 3 zijn gebouwd, fase 4 en 5 getest. Implementatienotities:
+- Sprites: Klimt's `happy` en `surprised` hangen aan een paal en worden niet gebruikt. Pose-mapping: idle en surprised = `beg` (surprised met "!" en een hupje), happy en jump = `jump`, sleep = `sleep` (`src/scene/dressup.ts` `POSE_SPRITE`).
+- Optionele GLB's in `public/models/` worden bij de build gevonden (`__MODELS__` in `vite.config.ts`), dus alleen bestaande modellen worden geladen. Zie `ASSETS.md`.
+- Debug: `?cat=glb|sprite|primitive`.
+- Tegelcoördinaten: tegel (x, z) beslaat wereld [x, x+1] x [z, z+1]; grond y = 0, water y = -0.3; meubel-`rot` is in kwartslagen.
+- Engine-keuzes bovenop de spec: meerkeuze tilt een woord hooguit naar doosje 3, de bovenste doosjes verdien je met typen; een woord dat schoon goed getypt wordt springt naar minstens doosje 4; meteen goed herkend slaat de omgekeerd-stap over; bij weinig dagen tot de toets en veel ongeziene woorden groeit het aandeel nieuwe woorden (max 60%).
+- Eilandgroei: 4x4, dan om en om een strook breder/dieper per 5 geleerde woorden, 8x8 bij 40, max 12x12.
+- Het vuurtorentje komt in de inventaris (eenmalig per toets) en zet je zelf neer in Bouwen.
