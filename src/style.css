@@ -204,6 +204,7 @@ input {
 }
 
 .btn.small {
+  white-space: nowrap;
   min-height: 44px;
   padding: 0 16px;
   font-size: 16px;
@@ -1217,4 +1218,30 @@ input {
 .dress-chip small {
   font-size: 12px;
   color: var(--ink-dim);
+}
+
+@media (max-width: 500px) {
+  .topbar {
+    gap: 6px;
+  }
+  .topbar .chip {
+    font-size: 14px;
+    padding: 0 10px;
+    min-height: 36px;
+  }
+  .progress {
+    gap: 3px;
+  }
+  .progress i {
+    width: 8px;
+    height: 8px;
+  }
+  .topbar .btn.small {
+    padding: 0 12px;
+    min-height: 40px;
+    font-size: 15px;
+  }
+  .q-prompt {
+    margin-bottom: 10px;
+  }
 }

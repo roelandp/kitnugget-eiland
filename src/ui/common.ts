@@ -77,7 +77,7 @@ export function inventoryChip(inv: Inventory): HTMLElement {
 
 export function updateInventoryChip(chip: HTMLElement, inv: Inventory): void {
   const c = inventoryCounts(inv)
-  chip.textContent = `🧱 ${c.blocks}   🐟 ${c.fish}   🪑 ${c.furniture}`
+  chip.textContent = `🧱\u2009${c.blocks}  🐟\u2009${c.fish}  🪑\u2009${c.furniture}`
 }
 
 export function lootList(items: { id: ItemId; n: number }[]): HTMLElement {

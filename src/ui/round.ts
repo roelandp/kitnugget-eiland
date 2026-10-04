@@ -159,12 +159,15 @@ export function roundScreen(app: App): Screen {
     const pick = engine.next()
     const animal = animalById(app.nextAnimal())
     currentAnimal = animal
-    showQuestion(pick, animal.naam, pickLine(pick.type === 'reverse' ? animal.askWord : animal.ask, pick.q.word))
+    const line = pickLine(pick.type === 'reverse' ? animal.askWord : animal.ask, pick.q.word)
+    const who = showQuestion(pick, `${animal.naam} komt eraan...`)
     await leaving
     if (disposed) return
     app.scene.catPose('idle')
     void app.scene.animalArrives(animal.id).then(() => {
-      if (!disposed) app.scene.animalState('talk')
+      if (disposed) return
+      app.scene.animalState('talk')
+      if (who.isConnected) who.textContent = `${animal.naam}: "${line}"`
     })
   }
 
@@ -194,14 +197,16 @@ export function roundScreen(app: App): Screen {
     return pick.q.definition
   }
 
-  function showQuestion(pick: Pick, who: string, line: string): void {
+  function showQuestion(pick: Pick, intro: string): HTMLElement {
     card.replaceChildren()
-    const head = el('div.q-head', {}, el('div.q-who', { text: `${who}: "${line}"` }), speakButton(app, () => speakTextFor(pick)))
+    const who = el('div.q-who', { text: intro })
+    const head = el('div.q-head', {}, who, speakButton(app, () => speakTextFor(pick)))
     const prompt = promptFor(pick)
     const feedback = el('div.feedback')
     const learnBox = el('div.learn.hidden')
     const body = pick.type === 'type' ? typeBody(pick, feedback, learnBox) : choiceBody(pick, prompt, feedback, learnBox)
     card.append(el('div.sheet-scroll', {}, head, el('div.q-kind', { text: KIND_LABEL[pick.type] }), prompt, learnBox, feedback, body))
+    return who
   }
 
   function showLearn(learnBox: HTMLElement, q: Question, answer: string, label: string): void {
@@ -359,7 +364,7 @@ export function roundScreen(app: App): Screen {
           app.audio.play('wrong')
           app.scene.catSurprised()
           app.scene.animalState('idle')
-          showLearn(learnBox, q, value, 'Het goede woord is')
+          showLearn(learnBox, q, '', 'Het goede woord is')
         }
         feedback.textContent = ''
         input.value = ''
