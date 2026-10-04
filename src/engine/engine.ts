@@ -112,10 +112,10 @@ export class WordEngine {
 
     const due = free.filter((q) => {
       const s = this.state(q.word)
-      return s.seen > 0 && !known(s) && isDue(s, now, toTest)
+      return s.seen > 0 && isDue(s, now, toTest)
     })
     const fresh = free.filter((q) => this.state(q.word).seen === 0)
-    const strong = free.filter((q) => known(this.state(q.word)))
+    const strong = free.filter((q) => known(this.state(q.word)) && !isDue(this.state(q.word), now, toTest))
 
     // 2. Roughly 60% due or weak, 25% new, 15% known; an empty pool passes its turn on.
     const mix = this.mixFor(fresh.length, toTest)
@@ -194,6 +194,11 @@ export class WordEngine {
     this.states.set(word, next)
     this.lastWord = word
     return { before, after: statusOf(next) }
+  }
+
+  /** Never start with the word the previous round ended on. */
+  avoid(word: string | null): void {
+    if (word) this.lastWord = word
   }
 
   /** The words that need attention most, for the end of a round. */

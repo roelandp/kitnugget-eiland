@@ -60,3 +60,8 @@ Debug: `?cat=sprite` of `?cat=primitive` forceert een andere Kit Nugget.
 ## Eigen 3D-modellen
 
 Optioneel: zet `public/models/kit-nugget.glb` neer (bijvoorbeeld een Tripo3D-scan) en Kit Nugget wordt automatisch dat model, geschaald naar één tegel hoog. Per dier kan ook een GLB: `eend.glb`, `schildpad.glb`, `uil.glb`, `konijn.glb`, `kikker.glb`. Zonder modellen draait alles op sprites en figuurtjes uit code.
+
+## Credits
+
+- Lettertype vragen: SchoolschriftLG, Bart Voorzanger & Liesbeth Flobbe (vrij voor niet-commercieel gebruik), syboor.eu/fonts/schoolschrift03/
+- Kit Nugget 3D: Meshy-model, versimpeld met `scripts/simplify-glb.mjs` (12.5k driehoeken, texture 1024).

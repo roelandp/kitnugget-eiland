@@ -84,6 +84,8 @@ export function reviveState(raw: unknown): WordState {
 export const BOX_DAYS = [0, 0, 1, 2, 4, 8]
 const DAY = 86_400_000
 const HOUR = 3_600_000
+/** Two clean typings count separately only with this much time between them. */
+export const SPACING_MS = 2 * HOUR
 
 /**
  * With the test close by there is no time for long gaps: the waiting times
@@ -159,9 +161,13 @@ export function applyAnswer(
     if (outcome === 'correct' && type === 'type') {
       // Typing it right without help proves the word is known: the easier
       // steps are skipped, unless it was just missed.
-      s.typedClean++
+      // The top box and "geleerd" need some time between two typings, not two in one sitting.
+      const spaced = prev.typedClean === 0 || now - prev.lastSeen >= SPACING_MS
+      if (spaced) s.typedClean++
       const fresh = prev.last !== 'wrong' && prev.last !== 'almost'
-      s.box = Math.min(MAX_BOX, fresh ? Math.max(prev.box + 1, 4) : prev.box + 1) as Box
+      let box = Math.min(MAX_BOX, fresh ? Math.max(prev.box + 1, 4) : prev.box + 1)
+      if (!spaced) box = Math.min(box, Math.max(prev.box, 4))
+      s.box = box as Box
       s.right.recognize = Math.max(1, s.right.recognize)
       s.right.reverse = Math.max(1, s.right.reverse)
       s.right.sentence = Math.max(1, s.right.sentence)

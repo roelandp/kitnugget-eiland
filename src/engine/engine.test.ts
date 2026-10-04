@@ -151,7 +151,11 @@ describe('leitner', () => {
     s = applyAnswer(s, 'type', 'correct', t0, null)
     expect(s.box).toBe(4)
     expect(statusOf(s)).toBe('bijna')
-    s = applyAnswer(s, 'type', 'correct', t0, null)
+    // Typed again in the same sitting: not yet learned.
+    const again = applyAnswer(s, 'type', 'correct', t0 + 60_000, null)
+    expect(again.box).toBe(4)
+    expect(statusOf(again)).toBe('bijna')
+    s = applyAnswer(s, 'type', 'correct', t0 + 3 * 3_600_000, null)
     expect(s.box).toBe(5)
     expect(statusOf(s)).toBe('geleerd')
     s = applyAnswer(s, 'type', 'wrong', t0, null)

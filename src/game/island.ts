@@ -14,9 +14,13 @@ export interface IslandSize {
 
 /** Every 5 learned words add a strip, alternating width and depth: 4x4, 5x4, 5x5, 6x5 ... */
 export function islandSize(learned: number): IslandSize {
+  return sizeForStep(Math.floor(learned / WORDS_PER_STEP))
+}
+
+export function sizeForStep(step: number): IslandSize {
   const maxSteps = (MAX_SIZE - START_SIZE) * 2
-  const step = Math.max(0, Math.min(maxSteps, Math.floor(learned / WORDS_PER_STEP)))
-  return { w: START_SIZE + Math.ceil(step / 2), d: START_SIZE + Math.floor(step / 2), step }
+  const s = Math.max(0, Math.min(maxSteps, step))
+  return { w: START_SIZE + Math.ceil(s / 2), d: START_SIZE + Math.floor(s / 2), step: s }
 }
 
 /** Words to go until the next growth step. */

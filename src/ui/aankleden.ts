@@ -8,7 +8,7 @@ export function aankledenScreen(app: App): Screen {
   const top = el('div.topbar', {}, el('button.btn.small', { onclick: () => app.go('menu') }, '← Klaar'), el('h1', { text: 'Aankleden' }))
   const preview = el('img.dress-preview', { alt: 'Kit Nugget' }) as HTMLImageElement
   const sections = el('div')
-  app.scene.pause()
+  app.holdScene(true)
 
   const progress = app.lookProgress()
   let look: Look = { ...app.store.profile.look, hats: [...app.store.profile.look.hats] }
@@ -80,7 +80,7 @@ export function aankledenScreen(app: App): Screen {
     root,
     dispose: () => {
       unsub()
-      app.scene.resume()
+      app.holdScene(false)
     },
   }
 }

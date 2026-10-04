@@ -5,6 +5,7 @@ import { wordsToNextStep } from '../game/island'
 import { inventoryChip, paws, testCountdown, watchInsets } from './common'
 import { el } from './dom'
 import { startRoaming } from './roam'
+import { catMover, onStageTap } from './move'
 
 export function menuScreen(app: App): Screen {
   const p = app.store.profile
@@ -88,13 +89,26 @@ export function menuScreen(app: App): Screen {
   }
 
   const unwatch = watchInsets(app, top, sheet)
+  const mover = catMover(app, root)
+  const offTap = onStageTap(app, (x, y) => {
+    if (awake) mover.tap(x, y)
+  })
+  let disposed = false
+  let wakeTimer = 0
   let stopRoam: (() => void) | null = asleep ? null : startRoaming(app, { tiredSleep: true })
   catcher.addEventListener('click', () => {
-    if (!stopRoam) window.setTimeout(() => (stopRoam = startRoaming(app, { tiredSleep: false })), 1600)
+    if (stopRoam) return
+    wakeTimer = window.setTimeout(() => {
+      if (!disposed && !stopRoam) stopRoam = startRoaming(app, { tiredSleep: false })
+    }, 1600)
   })
   return {
     root,
     dispose: () => {
+      disposed = true
+      window.clearTimeout(wakeTimer)
+      mover.dispose()
+      offTap()
       unwatch()
       stopRoam?.()
     },

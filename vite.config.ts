@@ -23,7 +23,8 @@ export default defineConfig({
   },
   plugins: [
     VitePWA({
-      registerType: 'autoUpdate',
+      // 'prompt' so a new version waits until the start screen instead of reloading mid-round.
+      registerType: 'prompt',
       injectRegister: null,
       includeAssets: ['sprites/**/*', 'misc/**/*', 'sounds/**/*', 'models/**/*'],
       manifest: {
@@ -44,9 +45,9 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // Fresh code wins: the SW takes over immediately on every new build.
+        // Fresh code wins: the app applies a waiting update as soon as it is on the start screen.
         clientsClaim: true,
-        skipWaiting: true,
+        skipWaiting: false,
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,webp,png,svg,json,mp3,glb,woff2}'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,

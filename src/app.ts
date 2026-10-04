@@ -6,7 +6,7 @@ import { ANIMAL_IDS, type AnimalId } from './scene/animals'
 import { IslandScene, type BlockType } from './scene/scene'
 import { WordEngine } from './engine/engine'
 import { statusOf } from './engine/words'
-import { islandSize } from './game/island'
+import { islandSize, sizeForStep } from './game/island'
 import { Store } from './storage/store'
 import { CatDresser, POSE_SPRITE } from './scene/dressup'
 import { sanitiseLook, type LookProgress } from './content/looks'
@@ -77,6 +77,14 @@ export class App {
   private current: Screen | null = null
   private host: HTMLElement
   private lastAnimal: AnimalId | null = null
+  private currentId: ScreenId | null = null
+  private held = false
+  /** The word the last round ended on, so the next round does not open with it. */
+  lastWord: string | null = null
+  /** Kit Nugget was sent somewhere by Viggo: no wandering off on his own until then. */
+  catHoldUntil = 0
+  /** Set when a new version is waiting; applied on the start screen, never mid-round. */
+  private pendingUpdate: (() => void) | null = null
 
   constructor(mount: HTMLElement) {
     this.base = new URL('./', location.href).href
@@ -120,7 +128,7 @@ export class App {
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') this.scene.pause()
-      else this.scene.resume()
+      else if (!this.held) this.scene.resume()
     })
   }
 
@@ -135,7 +143,31 @@ export class App {
     this.current?.dispose?.()
     clear(this.host)
     this.current = factory(this, payload)
+    this.currentId = id
     this.host.appendChild(this.current.root)
+    if (id === 'menu') this.applyUpdate()
+  }
+
+  /** Full-screen panels stop the 3D scene to save battery. */
+  holdScene(on: boolean): void {
+    this.held = on
+    if (on) this.scene.pause()
+    else this.scene.resume()
+  }
+
+  /** A new version is ready: reload now when on the start screen, else when it is next shown. */
+  updateReady(apply: () => void): void {
+    this.pendingUpdate = apply
+    if (this.currentId === 'menu') this.applyUpdate()
+  }
+
+  private applyUpdate(): void {
+    const apply = this.pendingUpdate
+    if (!apply) return
+    this.pendingUpdate = null
+    const note = el('div.update-note.bubble', { text: 'Nieuwe versie, even opnieuw laden' })
+    document.body.appendChild(note)
+    window.setTimeout(apply, 700)
   }
 
   // ---------- words ----------
@@ -171,23 +203,25 @@ export class App {
 
   // ---------- island ----------
 
-  /** Pushes island size and placed items to the scene. Returns true when it grew since last seen. */
+  /**
+   * Pushes island size and placed items to the scene. The island only ever
+   * grows: a learned word that slips back does not take land away. Growth is
+   * shown (risen from the water) the first time a screen asks for it.
+   * Returns true when it grew just now.
+   */
   syncIsland(animate: boolean): boolean {
-    const size = islandSize(this.learnedTotal())
-    const p = this.store.profile
-    const grew = size.step > p.island.seenStep
-    void this.scene.setIslandSize(size.w, size.d, animate && grew)
-    if (grew && animate) {
+    const current = islandSize(this.learnedTotal()).step
+    const seen = this.store.profile.island.seenStep
+    const grew = animate && current > seen
+    const size = sizeForStep(grew ? current : seen)
+    void this.scene.setIslandSize(size.w, size.d, grew)
+    if (grew) {
       this.store.update((pp) => {
-        pp.island.seenStep = size.step
-      })
-    } else if (!animate && size.step < p.island.seenStep) {
-      this.store.update((pp) => {
-        pp.island.seenStep = size.step
+        pp.island.seenStep = current
       })
     }
     this.pushPlaced()
-    return grew && animate
+    return grew
   }
 
   pushPlaced(): void {

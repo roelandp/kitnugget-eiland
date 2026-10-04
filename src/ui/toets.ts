@@ -30,7 +30,7 @@ export function toetsScreen(app: App): Screen {
   const inner = el('div.narrow')
   body.appendChild(inner)
   root.append(top, body)
-  app.scene.pause()
+  app.holdScene(true)
 
   intro()
 
@@ -73,6 +73,7 @@ export function toetsScreen(app: App): Screen {
     }
     const answers: { q: Question; answer: string; ok: boolean }[] = []
     let i = 0
+    let busy = false
 
     const counter = el('div.q-kind')
     const prompt = el('div.q-prompt')
@@ -100,6 +101,12 @@ export function toetsScreen(app: App): Screen {
       e.preventDefault()
       const q = order[i]
       const value = input.value
+      if (!q || busy || value.trim() === '') {
+        input.focus()
+        return
+      }
+      busy = true
+      window.setTimeout(() => (busy = false), 250)
       const check = checkTyped(value, q.word)
       // On a test, spelling counts: almost is not right.
       const ok = check.result === 'correct'
@@ -164,6 +171,6 @@ export function toetsScreen(app: App): Screen {
 
   return {
     root,
-    dispose: () => app.scene.resume(),
+    dispose: () => app.holdScene(false),
   }
 }

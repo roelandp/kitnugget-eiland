@@ -1,3 +1,9 @@
+@font-face {
+  font-family: 'Schoolschrift';
+  src: url('/fonts/schoolschrift.woff2') format('woff2');
+  font-display: swap;
+}
+
 :root {
   --ink: #3d3350;
   --ink-dim: #7a6f8f;
@@ -259,7 +265,7 @@ input {
   margin-top: auto;
   align-self: center;
   width: min(100%, 820px);
-  max-height: 72%;
+  max-height: 78%;
   display: flex;
   flex-direction: column;
   border-radius: 28px 28px 0 0;
@@ -1085,6 +1091,13 @@ input {
   pointer-events: auto;
 }
 
+/* The wake-up tap area lies under the menu itself, so the buttons always work. */
+.menu-top,
+.sheet {
+  position: relative;
+  z-index: 2;
+}
+
 /* ---------- build bar ---------- */
 
 .sheet.build {
@@ -1122,6 +1135,10 @@ input {
   background: var(--card-2);
   border: 3px solid transparent;
   position: relative;
+  touch-action: pan-x;
+}
+
+.slot.fish {
   touch-action: none;
 }
 
@@ -1261,4 +1278,99 @@ input {
     min-height: 44px;
     font-size: 15px;
   }
+}
+
+/* ---------- the question in school handwriting ---------- */
+
+.q-prompt,
+.learn .answer,
+.detail h2,
+.hint-box:not(.letters) {
+  font-family: 'Schoolschrift', ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+.q-prompt {
+  font-size: clamp(25px, 3.2vw + 12px, 38px);
+  line-height: 1.25;
+  color: #2f2640;
+}
+
+.q-prompt.word {
+  font-size: clamp(40px, 5vw + 18px, 62px);
+  color: #4a2a12;
+  -webkit-text-stroke: 0.6px currentColor;
+}
+
+.q-prompt,
+.learn .answer {
+  -webkit-text-stroke: 0.4px currentColor;
+}
+
+.q-prompt.long {
+  font-size: clamp(22px, 2.6vw + 10px, 32px);
+}
+
+.q-prompt.xlong {
+  font-size: clamp(20px, 2vw + 10px, 28px);
+}
+
+.learn .answer {
+  font-size: clamp(32px, 4vw + 14px, 48px);
+}
+
+.detail h2 {
+  font-size: 40px;
+}
+
+.hint-box:not(.letters) {
+  font-size: 22px;
+}
+
+/* No visible scrollbars in the cards, and room for the button shadows. */
+.sheet-scroll,
+.scroller,
+.buildbar {
+  scrollbar-width: none;
+}
+
+.sheet-scroll::-webkit-scrollbar,
+.scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.sheet-scroll {
+  padding: 2px 4px 8px;
+  margin: -2px -4px -8px;
+}
+
+.opt {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.options.long .opt {
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+@media (max-height: 760px) {
+  .opt {
+    min-height: 56px;
+    padding: 8px 12px;
+  }
+  .q-head {
+    margin-bottom: 4px;
+  }
+}
+
+.move-hint {
+  position: absolute;
+  left: 50%;
+  top: calc(max(12px, env(safe-area-inset-top)) + 64px);
+  transform: translateX(-50%);
+  z-index: 5;
+  pointer-events: none;
+  animation: fade 0.2s ease;
 }

@@ -17,7 +17,7 @@ export function instellingenScreen(app: App): Screen {
   const p = app.store.profile
   const root = el('div.screen.solid')
   const top = el('div.topbar', {}, el('button.btn.small', { onclick: () => app.go('menu') }, '← Terug'), el('h1', { text: 'Instellingen' }))
-  app.scene.pause()
+  app.holdScene(true)
 
   const list = el('div.choice-list')
   const renderList = () => {
@@ -106,5 +106,5 @@ export function instellingenScreen(app: App): Screen {
     ),
   )
   root.append(top, body)
-  return { root, dispose: () => app.scene.resume() }
+  return { root, dispose: () => app.holdScene(false) }
 }

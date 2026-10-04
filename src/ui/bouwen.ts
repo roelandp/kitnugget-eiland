@@ -5,6 +5,7 @@ import { addItems, takeItem } from '../game/rewards'
 import { watchInsets } from './common'
 import { el } from './dom'
 import { startRoaming } from './roam'
+import { catMover } from './move'
 
 const ERRORS: Record<PlaceError, string> = {
   buiten: 'Dat is in het water. Bouw op het eiland!',
@@ -41,6 +42,7 @@ export function bouwenScreen(app: App): Screen {
   const root = el('div.screen', {}, top, el('div.spacer'), sheet)
   const unwatch = watchInsets(app, top, sheet)
   const stopRoam = startRoaming(app, { tiredSleep: true })
+  const mover = catMover(app, root)
 
   function turn(dir: 1 | -1): void {
     app.audio.play('tap')
@@ -86,7 +88,7 @@ export function bouwenScreen(app: App): Screen {
     if (owned.length === 0 && fish === 0) {
       hint.textContent = 'Je hebt nog geen blokken. Speel een ronde om blokken te verdienen!'
     } else if (!tool) {
-      hint.textContent = 'Kies een blok en tik op het eiland. Veeg om het eiland te draaien.'
+      hint.textContent = 'Kies een blok en tik op het eiland. Veeg om te draaien. Tik op Kit Nugget om hem te verplaatsen.'
     } else if (tool === 'gum') {
       hint.textContent = 'Tik op een blok om het weg te halen.'
     } else {
@@ -102,14 +104,8 @@ export function bouwenScreen(app: App): Screen {
 
   function tapAt(clientX: number, clientY: number): void {
     if (!tool) {
-      // Tapping Kit Nugget without a tool: he is happy to see you.
-      const s = app.stage.getBoundingClientRect()
-      const c = app.scene.catScreenPos()
-      if (Math.hypot(clientX - s.left - c.x, clientY - s.top - c.y) < 70) {
-        app.scene.catJump()
-        app.scene.burst('hearts', 'cat')
-        app.audio.play('meow')
-      }
+      // No block chosen: tap Kit Nugget, then a tile, and he walks there.
+      mover.tap(clientX, clientY)
       return
     }
     const hit = app.scene.pick(clientX, clientY)
@@ -250,6 +246,7 @@ export function bouwenScreen(app: App): Screen {
     dispose: () => {
       unwatch()
       stopRoam()
+      mover.dispose()
       stage.removeEventListener('pointerdown', onDown)
       window.removeEventListener('pointermove', onMove)
       window.removeEventListener('pointerup', onUp)

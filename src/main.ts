@@ -15,27 +15,20 @@ import { toetsScreen } from './ui/toets'
  * again whenever the app comes back to the foreground, which is how an installed
  * web app on an iPad usually returns.
  */
-async function registerServiceWorker(): Promise<void> {
+async function registerServiceWorker(app: App): Promise<void> {
   if (!('serviceWorker' in navigator)) return
-  // On a first install the worker claims the page straight away; only a *later*
-  // takeover means new code arrived, and only then is a reload worth doing.
-  const hadController = Boolean(navigator.serviceWorker.controller)
-  let reloading = false
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!hadController || reloading) return
-    reloading = true
-    const note = document.createElement('div')
-    note.className = 'update-note bubble'
-    note.textContent = 'Nieuwe versie, even opnieuw laden'
-    document.body.appendChild(note)
-    window.setTimeout(() => location.reload(), 700)
-  })
   try {
     const { registerSW } = await import('virtual:pwa-register')
     const updateSW = registerSW({
       immediate: true,
+      // A new version is waiting. It takes over (and the page reloads) once
+      // Viggo is on the start screen, never in the middle of a round or test.
       onNeedRefresh() {
-        void updateSW(true)
+        app.updateReady(() => {
+          void updateSW(true)
+          // Fallback in case the controlling event never comes.
+          window.setTimeout(() => location.reload(), 4000)
+        })
       },
       onRegisteredSW(_url, registration) {
         if (!registration) return
@@ -65,13 +58,20 @@ function syncAppHeight(): void {
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
   const isStandalone = Boolean((window.navigator as unknown as { standalone?: boolean }).standalone) || window.matchMedia('(display-mode: standalone)').matches
   const vv = window.visualViewport
+  // Only trust the screen size when the app really fills the screen (not in Split View or Stage Manager).
+  const fullScreenWindow = () => {
+    const landscape = window.innerWidth > window.innerHeight
+    const sw = landscape ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height)
+    const sh = landscape ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height)
+    return Math.abs(window.innerWidth - sw) < 2 && sh - window.innerHeight < 60
+  }
 
   const update = () => {
     const keyboard = vv ? window.innerHeight - vv.height > 120 : false
     let h: number
     if (keyboard && vv) {
       h = vv.height
-    } else if (isIOS && isStandalone) {
+    } else if (isIOS && isStandalone && fullScreenWindow()) {
       // In an iOS home-screen app WebKit subtracts the status bar from innerHeight.
       h = window.innerWidth > window.innerHeight ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height)
     } else {
@@ -115,7 +115,7 @@ function boot(): void {
   document.addEventListener('gesturestart', (e) => e.preventDefault())
   document.addEventListener('dblclick', (e) => e.preventDefault())
 
-  void registerServiceWorker()
+  void registerServiceWorker(app)
 }
 
 boot()

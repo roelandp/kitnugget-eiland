@@ -56,7 +56,7 @@ export function kaartScreen(app: App): Screen {
 
   const body = el('div.scroller', {}, el('div.narrow', {}, el('p.note', { html: `<strong>${escapeHtml(toets.title)}</strong>` }), legend, testLine, tiles, parent))
   root.append(top, body)
-  app.scene.pause()
+  app.holdScene(true)
 
   function detail(q: Question): void {
     const s = engine.state(q.word)
@@ -86,5 +86,5 @@ export function kaartScreen(app: App): Screen {
     root.appendChild(overlay)
   }
 
-  return { root, dispose: () => app.scene.resume() }
+  return { root, dispose: () => app.holdScene(false) }
 }

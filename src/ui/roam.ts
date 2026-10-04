@@ -19,6 +19,10 @@ export function startRoaming(app: App, opts: { tiredSleep?: boolean } = {}): () 
 
   async function step(): Promise<void> {
     if (stopped || busy) return
+    if (Date.now() < app.catHoldUntil) {
+      schedule(app.catHoldUntil - Date.now() + 500)
+      return
+    }
     busy = true
     try {
       const blocks = app.store.profile.island.blocks

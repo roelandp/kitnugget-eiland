@@ -3,6 +3,7 @@ import { itemInfo, type ItemId } from '../content/blocks'
 import { daysUntil } from '../content'
 import { ROUNDS_PER_DAY, roundsToday } from '../game/day'
 import type { Inventory } from '../game/rewards'
+import { speak } from '../audio/speak'
 import { el } from './dom'
 
 /** Two paw prints that colour in per finished round today. */
@@ -42,7 +43,7 @@ export function speakButton(app: App, text: () => string): HTMLElement {
       e.stopPropagation()
       app.audio.unlock()
       // The button always reads aloud, even when automatic reading is off.
-      import('../audio/speak').then(({ speak }) => speak(text()))
+      speak(text())
     },
     text: '🔊',
   })

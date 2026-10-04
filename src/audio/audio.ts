@@ -46,7 +46,8 @@ export class Audio {
       }
     }
     if (this.ctx) {
-      if (this.ctx.state === 'suspended') void this.ctx.resume()
+      // iOS reports 'interrupted' after a call, Siri or a locked screen.
+      if (this.ctx.state !== 'running' && this.ctx.state !== 'closed') void this.ctx.resume()
       return
     }
     const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext

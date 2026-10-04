@@ -54,13 +54,16 @@ export function resultScreen(app: App, payload?: unknown): Screen {
   const unwatch = watchInsets(app, null, sheet)
 
   // Growth and the sunset come a moment later, so they are noticed.
+  let fired = false
+  let lighthouseTimer = 0
   const timer = window.setTimeout(() => {
+    fired = true
     if (app.syncIsland(true)) {
       app.audio.play('grow')
       app.toast('Het eiland groeit!')
     }
     if (checkLighthouse(app)) {
-      window.setTimeout(() => app.toast('Alle woorden geleerd! Je krijgt een vuurtorentje!'), 2800)
+      lighthouseTimer = window.setTimeout(() => app.toast('Alle woorden geleerd! Je krijgt een vuurtorentje!'), 2800)
     }
     if (tired) app.scene.setMood('sunset')
     app.scene.catPose('idle')
@@ -70,6 +73,9 @@ export function resultScreen(app: App, payload?: unknown): Screen {
     root,
     dispose: () => {
       window.clearTimeout(timer)
+      window.clearTimeout(lighthouseTimer)
+      // Left quickly: still hand out what was earned, just without the show.
+      if (!fired) checkLighthouse(app)
       unwatch()
     },
   }

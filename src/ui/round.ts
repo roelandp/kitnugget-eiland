@@ -61,6 +61,7 @@ const ALMOST_TEXT: Record<AlmostReason, string> = {
 
 export function roundScreen(app: App): Screen {
   const engine = app.makeEngine()
+  engine.avoid(app.lastWord)
   const rng = makeRng(Date.now() & 0x7fffffff)
   const earned: ItemId[] = []
   const learned: string[] = []
@@ -101,6 +102,7 @@ export function roundScreen(app: App): Screen {
   }
 
   function record(q: Question, type: Pick['type'], outcome: Outcome): ItemId[] {
+    answered = true
     const { before, after } = engine.record(q.word, type, outcome)
     asked.add(q.word)
     if (after === 'geleerd' && before !== 'geleerd' && !learned.includes(q.word)) learned.push(q.word)
@@ -109,6 +111,7 @@ export function roundScreen(app: App): Screen {
     const items = rewardFor(type, outcome, streak, rng)
     earned.push(...items)
     app.saveEngine(engine)
+    app.lastWord = q.word
     app.store.update((p) => {
       p.inventory = addItems(p.inventory, items)
       p.stats.answers++
@@ -161,23 +164,32 @@ export function roundScreen(app: App): Screen {
     currentAnimal = animal
     const line = pickLine(pick.type === 'reverse' ? animal.askWord : animal.ask, pick.q.word)
     const who = showQuestion(pick, `${animal.naam} komt eraan...`)
-    await leaving
-    if (disposed) return
-    app.scene.catPose('idle')
-    void app.scene.animalArrives(animal.id).then(() => {
-      if (disposed) return
-      app.scene.animalState('talk')
+    const my = ++seq
+    answered = false
+    arrival = leaving.then(async () => {
+      if (disposed || my !== seq) return
+      app.scene.catPose('idle')
+      await app.scene.animalArrives(animal.id)
+      if (disposed || my !== seq) return
+      if (!answered) app.scene.animalState('talk')
       if (who.isConnected) who.textContent = `${animal.naam}: "${line}"`
     })
   }
 
   let currentAnimal = animalById(app.nextAnimal())
+  /** Bumped per question, so a late arrival never acts on a newer question. */
+  let seq = 0
+  let answered = false
+  let arrival: Promise<void> = Promise.resolve()
 
   async function done(): Promise<void> {
+    answered = true
     await sleep(1300)
     if (disposed) return
     index++
-    leaving = app.scene.animalLeaves()
+    // Let the visitor finish arriving before it waves goodbye.
+    const arrived = arrival
+    leaving = arrived.then(() => (disposed ? undefined : app.scene.animalLeaves()))
     void next()
   }
 
@@ -186,9 +198,13 @@ export function roundScreen(app: App): Screen {
     if (pick.type === 'reverse') return el('div.q-prompt.word', { text: q.word })
     if (pick.type === 'sentence' && q.sentence) {
       const [a, b] = q.sentence.split('___')
-      return el('div.q-prompt', { html: `${escapeHtml(a)}<span class="gap">&nbsp;</span>${escapeHtml(b ?? '')}` })
+      return el(`div.q-prompt${lengthClass(q.sentence)}`, { html: `${escapeHtml(a)}<span class="gap">&nbsp;</span>${escapeHtml(b ?? '')}` })
     }
-    return el('div.q-prompt', { text: q.definition })
+    return el(`div.q-prompt${lengthClass(q.definition)}`, { text: q.definition })
+  }
+
+  function lengthClass(text: string): string {
+    return text.length > 130 ? '.xlong' : text.length > 80 ? '.long' : ''
   }
 
   function speakTextFor(pick: Pick): string {
