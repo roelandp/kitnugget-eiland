@@ -53,9 +53,22 @@ const AZ0 = Math.PI / 4
 const CAM_DIST = 40
 const SINK: Partial<Record<AnimalId, number>> = { eend: 0.1, schildpad: 0.14, kikker: 0.12 }
 /** Height of a visitor scan; the plush lies down, so its height is small. */
-const VISITOR_H: Partial<Record<AnimalId, number>> = { knuffel: 0.3 }
+const VISITOR_H: Partial<Record<AnimalId, number>> = { knuffel: 0.62 }
 /** Height of a scan riding on Kit Nugget's back. */
-const RIDER_H: Partial<Record<AnimalId, number>> = { uil: 0.55, knuffel: 0.22 }
+const RIDER_H: Partial<Record<AnimalId, number>> = { uil: 0.55, knuffel: 0.36 }
+
+/**
+ * Scans that come lying down: the rainbow plush is modelled flat with its face up.
+ * Stand it up, round balls on the ground and the face to the front.
+ */
+function upright(id: string, scene: THREE.Object3D): THREE.Object3D {
+  if (id !== 'knuffel') return scene
+  const g = new THREE.Group()
+  const inner = scene.clone(true)
+  inner.rotation.x = Math.PI / 2
+  g.add(inner)
+  return g
+}
 
 type AnimateBoatFn = (boat: THREE.Group, t: number, rowing?: boolean) => void
 const animateBoat = (Animals as unknown as Record<string, unknown>).animateBoat as AnimateBoatFn | undefined
@@ -213,7 +226,7 @@ export class IslandScene {
     // Furniture scans: the rainbow plush can be placed on the island too.
     if (this.hasModel('knuffel')) {
       void loadOptionalGlb(`${this.base}models/knuffel.glb`).then((g) => {
-        if (g && !this.disposed) this.props.setTemplate('knuffel', normalizeModel(g.scene, 0.26))
+        if (g && !this.disposed) this.props.setTemplate('knuffel', normalizeModel(upright('knuffel', g.scene), 0.62))
       })
     }
     this.ready = loadCat(this.base, this.hasModel('kit-nugget')).then((cat) => {
@@ -542,7 +555,7 @@ export class IslandScene {
     }
     const gltf = this.hasModel(id) ? await loadOptionalGlb(`${this.base}models/${id}.glb`) : null
     if (seq !== this.riderSeq || this.disposed) return
-    const model = gltf ? normalizeModel(gltf.scene, RIDER_H[id] ?? 0.55) : buildAnimal(id)
+    const model = gltf ? normalizeModel(upright(id, gltf.scene), RIDER_H[id] ?? 0.55) : buildAnimal(id)
     if (!gltf) model.scale.setScalar(id === 'knuffel' ? 0.45 : 0.65)
     model.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) o.castShadow = true
@@ -565,7 +578,7 @@ export class IslandScene {
       id === 'papa'
         ? buildPapa(gltf ? normalizeModel(gltf.scene, 0.46) : null)
         : gltf
-          ? normalizeModel(gltf.scene, VISITOR_H[id] ?? 0.7)
+          ? normalizeModel(upright(id, gltf.scene), VISITOR_H[id] ?? 0.7)
           : buildAnimal(id)
     model.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) o.castShadow = true

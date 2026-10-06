@@ -199,8 +199,13 @@ export function animateHelicopter(heli: THREE.Object3D, t: number): void {
 
 /** A soft rainbow plush made from striped capsules, for when the scan is missing. */
 export function buildPlushFallback(): THREE.Group {
+  const root = new THREE.Group()
+  root.name = 'knuffel'
+  // Built lying along Z, then stood up: balls on the ground, face to the front.
   const g = new THREE.Group()
-  g.name = 'knuffel'
+  g.rotation.x = -Math.PI / 2
+  g.position.y = 0.45
+  root.add(g)
   const colors = ['#ff6b6b', '#ffb36b', '#ffe36b', '#7fd67f', '#6bb6ff', '#a98bff']
   colors.forEach((c, i) => {
     const seg = mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.09, 14), c, 0, 0.12, -0.24 + i * 0.09)
@@ -208,9 +213,9 @@ export function buildPlushFallback(): THREE.Group {
     g.add(seg)
   })
   g.add(mesh(new THREE.SphereGeometry(0.13, 14, 10), '#ff6b6b', 0, 0.13, 0.3))
-  g.add(mesh(new THREE.SphereGeometry(0.02, 8, 6), '#3d3350', -0.05, 0.17, 0.42))
-  g.add(mesh(new THREE.SphereGeometry(0.02, 8, 6), '#3d3350', 0.05, 0.17, 0.42))
+  g.add(mesh(new THREE.SphereGeometry(0.02, 8, 6), '#3d3350', -0.05, 0.01, 0.34))
+  g.add(mesh(new THREE.SphereGeometry(0.02, 8, 6), '#3d3350', 0.05, 0.01, 0.34))
   g.add(mesh(new THREE.SphereGeometry(0.11, 12, 10), '#a98bff', -0.08, 0.1, -0.34))
   g.add(mesh(new THREE.SphereGeometry(0.11, 12, 10), '#6bb6ff', 0.08, 0.1, -0.34))
-  return g
+  return root
 }

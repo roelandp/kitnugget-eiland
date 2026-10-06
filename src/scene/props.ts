@@ -25,7 +25,7 @@ export const PROP_HEIGHT: Record<string, number> = {
   boompje: 1.1,
   hek: 0.45,
   bed: 0.35,
-  knuffel: 0.3,
+  knuffel: 0.65,
   bloempot: 0.6,
   parasol: 1.2,
   tafeltje: 0.5,
