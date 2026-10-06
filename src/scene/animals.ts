@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { buildPapa, buildPlushFallback } from './visitors'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 
 /**
@@ -12,17 +13,22 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
  * Units: 1 = one island tile. Feet at y = 0, facing +Z.
  */
 
-export type AnimalId = 'eend' | 'schildpad' | 'uil' | 'konijn' | 'kikker'
+export type AnimalId = 'eend' | 'schildpad' | 'uil' | 'konijn' | 'kikker' | 'knuffel' | 'papa'
 
-export const ANIMAL_IDS: AnimalId[] = ['eend', 'schildpad', 'uil', 'konijn', 'kikker']
+/** The everyday visitors, picked at random. Papa is special and comes on his own schedule. */
+export const ANIMAL_IDS: AnimalId[] = ['eend', 'schildpad', 'uil', 'konijn', 'kikker', 'knuffel']
+
+export type Travel = 'swim' | 'boat' | 'fly' | 'hop' | 'heli'
 
 /** How the animal travels to the island. */
-export const ANIMAL_TRAVEL: Record<AnimalId, 'swim' | 'boat' | 'fly' | 'hop'> = {
+export const ANIMAL_TRAVEL: Record<AnimalId, Travel> = {
   eend: 'swim',
   schildpad: 'swim',
   kikker: 'swim',
   uil: 'fly',
   konijn: 'boat',
+  knuffel: 'boat',
+  papa: 'heli',
 }
 
 export type AnimalState = 'idle' | 'swim' | 'walk' | 'fly' | 'happy' | 'talk'
@@ -570,6 +576,8 @@ export function buildAnimal(id: AnimalId): THREE.Group {
     case 'uil': return buildOwl()
     case 'konijn': return buildRabbit()
     case 'kikker': return buildFrog()
+    case 'knuffel': return buildPlushFallback()
+    case 'papa': return buildPapa(null)
   }
 }
 

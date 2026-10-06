@@ -68,6 +68,8 @@ export interface Profile {
   extensionUsed: boolean
   /** The starter set of furniture was handed out. */
   starterGiven: boolean
+  /** Furniture already handed out as a gift, so new kinds can be given once later on. */
+  gifts: string[]
 }
 
 export interface SaveFile {
@@ -90,6 +92,7 @@ export function emptyProfile(naam = 'Viggo'): Profile {
     buildTime: START_SECONDS,
     extensionUsed: false,
     starterGiven: false,
+    gifts: [],
   }
 }
 
@@ -172,6 +175,9 @@ function migrateProfile(raw: unknown): Profile {
   p.buildTime = Math.max(0, Math.min(CAP_SECONDS, num(v.buildTime, START_SECONDS)))
   p.extensionUsed = v.extensionUsed === true
   p.starterGiven = v.starterGiven === true
+  p.gifts = Array.isArray(v.gifts) ? v.gifts.filter((x): x is string => typeof x === 'string') : []
+  // The first starter set held these; they count as handed out.
+  if (p.starterGiven && p.gifts.length === 0) p.gifts = ['mand', 'bed', 'krabpaal', 'voerbak', 'lantaarn', 'bankje', 'boompje', 'hek', 'bloempot', 'parasol', 'tafeltje']
   return p
 }
 

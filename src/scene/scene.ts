@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import * as Animals from './animals'
-import { ANIMAL_TRAVEL, animateAnimal, buildAnimal, buildBoat, type AnimalId, type AnimalState } from './animals'
+import { ANIMAL_TRAVEL, animateAnimal, buildAnimal, buildBoat, type AnimalId, type AnimalState, type Travel } from './animals'
+import { animateHelicopter, animatePapa, buildHelicopter, buildPapa } from './visitors'
 import { loadCat, type CatAvatar, type CatKind, type CatPose, type ImageInset } from './cat'
 import { BlockLayer, type PlacedBlock } from './blocks'
 import { PropLayer, PROP_HEIGHT, type PlacedProp } from './props'
@@ -51,6 +52,10 @@ const ELEVATION = Math.atan(1 / Math.SQRT2) // 35.26 deg
 const AZ0 = Math.PI / 4
 const CAM_DIST = 40
 const SINK: Partial<Record<AnimalId, number>> = { eend: 0.1, schildpad: 0.14, kikker: 0.12 }
+/** Height of a visitor scan; the plush lies down, so its height is small. */
+const VISITOR_H: Partial<Record<AnimalId, number>> = { knuffel: 0.3 }
+/** Height of a scan riding on Kit Nugget's back. */
+const RIDER_H: Partial<Record<AnimalId, number>> = { uil: 0.55, knuffel: 0.22 }
 
 type AnimateBoatFn = (boat: THREE.Group, t: number, rowing?: boolean) => void
 const animateBoat = (Animals as unknown as Record<string, unknown>).animateBoat as AnimateBoatFn | undefined
@@ -64,7 +69,7 @@ interface Actor {
   alive: boolean
   spot: THREE.Vector3
   dir: THREE.Vector3
-  travel: 'swim' | 'boat' | 'fly' | 'hop'
+  travel: Travel
   boat: THREE.Group | null
   hop: number
 }
@@ -205,6 +210,12 @@ export class IslandScene {
     this.resize()
 
     this.models = opts.models ? new Set(opts.models) : null
+    // Furniture scans: the rainbow plush can be placed on the island too.
+    if (this.hasModel('knuffel')) {
+      void loadOptionalGlb(`${this.base}models/knuffel.glb`).then((g) => {
+        if (g && !this.disposed) this.props.setTemplate('knuffel', normalizeModel(g.scene, 0.26))
+      })
+    }
     this.ready = loadCat(this.base, this.hasModel('kit-nugget')).then((cat) => {
       if (this.disposed) {
         cat.dispose()
@@ -531,8 +542,8 @@ export class IslandScene {
     }
     const gltf = this.hasModel(id) ? await loadOptionalGlb(`${this.base}models/${id}.glb`) : null
     if (seq !== this.riderSeq || this.disposed) return
-    const model = gltf ? normalizeModel(gltf.scene, 0.55) : buildAnimal(id)
-    if (!gltf) model.scale.setScalar(0.65)
+    const model = gltf ? normalizeModel(gltf.scene, RIDER_H[id] ?? 0.55) : buildAnimal(id)
+    if (!gltf) model.scale.setScalar(id === 'knuffel' ? 0.45 : 0.65)
     model.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) o.castShadow = true
     })
@@ -549,7 +560,13 @@ export class IslandScene {
     if (this.disposed) return
     if (this.actor) this.removeActor(this.actor)
 
-    const model = gltf ? normalizeModel(gltf.scene, 0.7) : buildAnimal(id)
+    // Papa: the scanned head on a little animated body. The plush lies down, so it is sized lower.
+    const model =
+      id === 'papa'
+        ? buildPapa(gltf ? normalizeModel(gltf.scene, 0.46) : null)
+        : gltf
+          ? normalizeModel(gltf.scene, VISITOR_H[id] ?? 0.7)
+          : buildAnimal(id)
     model.traverse((o) => {
       if ((o as THREE.Mesh).isMesh) o.castShadow = true
     })
@@ -561,7 +578,7 @@ export class IslandScene {
       id,
       root,
       model,
-      glb: !!gltf,
+      glb: !!gltf && id !== 'papa',
       state: 'idle',
       alive: true,
       spot,
@@ -654,6 +671,40 @@ export class IslandScene {
         )
         if (!alive()) return
         root.position.copy(end)
+        break
+      }
+      case 'heli': {
+        const heli = buildHelicopter()
+        actor.boat = heli
+        const seat = (heli.userData.seat as THREE.Object3D | undefined) ?? heli
+        seat.add(root)
+        root.position.set(0, 0, 0)
+        root.rotation.set(0, 0, 0)
+        this.scene.add(heli)
+        const hover = spot.clone().addScaledVector(dir, 1.45)
+        hover.y = 0.55
+        const start = spot.clone().addScaledVector(dir, 9)
+        start.y = 4.2
+        const ctrl = spot.clone().addScaledVector(dir, 4)
+        ctrl.y = 2.6
+        heli.userData.hoverY = null
+        await this.anim.run(
+          2.6,
+          (k) => {
+            const e = easeInOutSine(k)
+            bezier(start, ctrl, hover, e, heli.position)
+            heli.rotation.y = Math.atan2(-dir.x, -dir.z)
+            // Nose down while flying, level when it slows down to hover.
+            heli.rotation.x = 0.28 * Math.sin(Math.PI * Math.min(1, k * 1.2))
+          },
+          alive,
+        )
+        if (!alive()) return
+        heli.rotation.x = 0
+        heli.userData.hoverY = hover.y
+        this.scene.attach(root)
+        actor.state = 'happy'
+        await this.hopActor(actor, spot, 0.5, 0.45)
         break
       }
       case 'hop': {
@@ -768,6 +819,44 @@ export class IslandScene {
             bezierTangent(start, ctrl, end, Math.max(0.02, e), this.v1)
             root.rotation.y = Math.atan2(this.v1.x, this.v1.z)
             root.scale.setScalar(k > 0.8 ? 1 - (k - 0.8) / 0.2 : 1)
+          },
+          alive,
+        )
+        break
+      }
+      case 'heli': {
+        const heli = actor.boat
+        if (!heli) break
+        const seat = (heli.userData.seat as THREE.Object3D | undefined) ?? heli
+        seat.updateMatrixWorld()
+        await this.hopActor(actor, seat.getWorldPosition(new THREE.Vector3()), 0.5, 0.45)
+        if (!alive()) return
+        seat.attach(root)
+        root.position.set(0, 0, 0)
+        root.rotation.set(0, 0, 0)
+        actor.state = 'idle'
+        heli.userData.hoverY = null
+        const start = heli.position.clone()
+        const up = start.clone()
+        up.y = 1.6
+        const end = spot.clone().addScaledVector(dir, 9)
+        end.y = 4.5
+        const r0 = heli.rotation.y
+        await this.anim.run(
+          0.8,
+          (k) => {
+            heli.position.lerpVectors(start, up, easeInOutSine(k))
+            heli.rotation.y = r0 + Math.PI * easeInOutCubic(k)
+          },
+          alive,
+        )
+        if (!alive()) return
+        await this.anim.run(
+          1.8,
+          (k) => {
+            heli.position.lerpVectors(up, end, easeInCubic(k))
+            heli.rotation.x = 0.25 * Math.min(1, k * 3)
+            heli.scale.setScalar(k > 0.8 ? 1 - (k - 0.8) / 0.2 : 1)
           },
           alive,
         )
@@ -1182,8 +1271,14 @@ export class IslandScene {
   private updateActor(dt: number, t: number): void {
     const a = this.actor
     if (!a) return
-    if (a.glb) animateWhole(a.model, a.state, t)
+    if (a.model.userData.custom === 'papa') animatePapa(a.model, a.state, t)
+    else if (a.glb) animateWhole(a.model, a.state, t)
     else animateAnimal(a.model as THREE.Group, a.state, t, dt)
+    if (a.travel === 'heli' && a.boat) {
+      animateHelicopter(a.boat, t)
+      const hy = a.boat.userData.hoverY as number | null
+      if (typeof hy === 'number') a.boat.position.y = hy + 0.05 * Math.sin(t * 2.2)
+    }
     if (a.boat && a.boat.parent && a.root.parent !== a.boat && a.root.parent?.parent !== a.boat) {
       // boat waiting at the shore
       a.boat.position.y = WATER_Y - 0.06 + 0.025 * Math.sin(t * 2.6)

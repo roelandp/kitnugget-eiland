@@ -128,10 +128,13 @@ export function roundScreen(app: App, payload?: unknown): Screen {
       if (before > 0 && run === 0) app.toast('Oeps, nog een keer! 5 goed op een rij en je mag weer bouwen.')
     }
     streak = nextStreak(streak, outcome)
+    // Papa is strict, but a right answer for him counts double: twice the blocks, twice the time.
+    const papaBonus = currentAnimal.id === 'papa' && (outcome === 'correct' || outcome === 'hint')
     const items = rewardFor(type, outcome, streak, rng)
+    if (papaBonus) items.push(...rewardFor(type, outcome, 0, rng))
     earned.push(...items)
     // The unlock round pays a fixed extension at the end instead of time per answer.
-    const time = unlock ? 0 : secondsFor(outcome) + (learned.includes(q.word) && after === 'geleerd' && before !== 'geleerd' ? LEARNED_BONUS : 0)
+    const time = (unlock ? 0 : secondsFor(outcome) + (learned.includes(q.word) && after === 'geleerd' && before !== 'geleerd' ? LEARNED_BONUS : 0)) * (papaBonus ? 2 : 1)
     seconds += time
     app.saveEngine(engine)
     app.lastWord = q.word
@@ -145,16 +148,20 @@ export function roundScreen(app: App, payload?: unknown): Screen {
 
   async function celebrate(items: ItemId[], outcome: Outcome): Promise<void> {
     app.audio.play('right')
+    const papa = currentAnimal.id === 'papa' && (outcome === 'correct' || outcome === 'hint')
+    if (papa) showDouble()
+    // The double-points moment gets the stage first; streak news follows after it.
+    const toast = (text: string) => (papa ? window.setTimeout(() => app.toast(text), 2300) : app.toast(text))
     app.scene.catJump()
     app.scene.animalState('happy')
     app.scene.burst('sparkle', 'cat')
     if (streak > 0 && streak % 5 === 0 && (outcome === 'correct' || outcome === 'hint')) {
       app.audio.play('streak', streak)
-      app.toast(`${streak} op een rij! Een meubelstuk voor het eiland!`)
+      toast(`${streak} op een rij! Een meubelstuk voor het eiland!`)
       app.scene.burst('stars', 'cat')
     } else if (streak > 0 && streak % 3 === 0 && (outcome === 'correct' || outcome === 'hint')) {
       app.audio.play('streak', streak)
-      app.toast(`${streak} op een rij! Een vissnoepje voor Kit Nugget!`)
+      toast(`${streak} op een rij! Een vissnoepje voor Kit Nugget!`)
     }
     window.setTimeout(() => app.audio.play('reward'), 350)
     await app.flyRewards(items, invChip)
@@ -196,7 +203,7 @@ export function roundScreen(app: App, payload?: unknown): Screen {
     }
     updateTop()
     const pick = engine.next()
-    const animal = animalById(app.nextAnimal())
+    const animal = animalById(index === papaAt ? 'papa' : app.nextAnimal())
     currentAnimal = animal
     const line = pickLine(pick.type === 'reverse' ? animal.askWord : animal.ask, pick.q.word)
     const who = showQuestion(pick, `${animal.naam} komt eraan...`)
@@ -213,6 +220,20 @@ export function roundScreen(app: App, payload?: unknown): Screen {
   }
 
   let currentAnimal = animalById(app.nextAnimal())
+  /** Papa flies in once in most rounds, somewhere in the middle. Never in the short unlock round. */
+  const papaAt = !unlock && Math.random() < 0.85 ? 2 + Math.floor(Math.random() * Math.max(1, length - 3)) : -1
+
+  /** A big, happy "double points" moment. */
+  function showDouble(): void {
+    const note = el('div.double', {}, el('div.double-x', { text: 'x2' }), el('div.double-text', { text: 'DUBBELE PUNTEN!' }), el('div.double-sub', { text: 'Papa is trots op je!' }))
+    root.appendChild(note)
+    app.audio.play('streak', 8)
+    window.setTimeout(() => app.audio.play('grow'), 250)
+    app.scene.burst('stars', 'animal')
+    app.scene.burst('sparkle', 'cat')
+    window.setTimeout(() => app.scene.burst('stars', 'cat'), 300)
+    window.setTimeout(() => note.remove(), 2400)
+  }
   /** Bumped per question, so a late arrival never acts on a newer question. */
   let seq = 0
   let answered = false

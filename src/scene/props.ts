@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js'
 import { clamp01, easeOutBack } from './tween'
+import { buildPlushFallback } from './visitors'
 
 /** Furniture placed on the island. `rot` is a number of quarter turns (0..3). */
 export interface PlacedProp {
@@ -12,7 +13,7 @@ export interface PlacedProp {
   rot?: number
 }
 
-export const PROP_TYPES = ['mand', 'bed', 'krabpaal', 'voerbak', 'lantaarn', 'bankje', 'boompje', 'hek', 'bloempot', 'parasol', 'tafeltje', 'vuurtoren'] as const
+export const PROP_TYPES = ['mand', 'bed', 'knuffel', 'krabpaal', 'voerbak', 'lantaarn', 'bankje', 'boompje', 'hek', 'bloempot', 'parasol', 'tafeltje', 'vuurtoren'] as const
 
 /** Approximate heights, used for camera framing. */
 export const PROP_HEIGHT: Record<string, number> = {
@@ -24,6 +25,7 @@ export const PROP_HEIGHT: Record<string, number> = {
   boompje: 1.1,
   hek: 0.45,
   bed: 0.35,
+  knuffel: 0.3,
   bloempot: 0.6,
   parasol: 1.2,
   tafeltje: 0.5,
@@ -357,6 +359,9 @@ function buildRaw(type: string): THREE.Group {
     case 'bed':
       buildBed(g)
       break
+    case 'knuffel':
+      g.add(buildPlushFallback())
+      break
     case 'bloempot':
       buildBloempot(g)
       break
@@ -400,6 +405,34 @@ export class PropLayer {
     this.group.name = 'props'
   }
 
+  private templates = new Map<string, THREE.Object3D>()
+
+  /**
+   * A scanned model for a prop type (e.g. the rainbow plush). Used instead of the
+   * primitive version from now on; pieces already placed are rebuilt.
+   */
+  setTemplate(type: string, obj: THREE.Object3D): void {
+    this.templates.set(type, obj)
+    for (const e of this.entries.values()) {
+      if (e.prop.type !== type) continue
+      const fresh = this.make(type)
+      fresh.position.copy(e.obj.position)
+      fresh.rotation.copy(e.obj.rotation)
+      this.group.remove(e.obj)
+      this.group.add(fresh)
+      e.obj = fresh
+    }
+  }
+
+  private make(type: string): THREE.Group {
+    const tpl = this.templates.get(type)
+    if (!tpl) return buildProp(type)
+    const g = new THREE.Group()
+    g.name = `prop-${type}`
+    g.add(tpl.clone(true))
+    return g
+  }
+
   set(props: PlacedProp[], now: number): void {
     const next = new Map<string, PropEntry>()
     const firstFill = this.entries.size === 0
@@ -408,7 +441,7 @@ export class PropLayer {
       if (next.has(k)) continue
       let e = this.entries.get(k)
       if (!e) {
-        const obj = buildProp(p.type)
+        const obj = this.make(p.type)
         obj.position.set(p.x + 0.5, p.y, p.z + 0.5)
         obj.rotation.y = ((p.rot ?? 0) * Math.PI) / 2
         this.group.add(obj)

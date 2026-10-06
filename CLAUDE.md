@@ -222,3 +222,10 @@ Fase 1 t/m 3 zijn gebouwd, fase 4 en 5 getest. Implementatienotities:
 - De uil heet Uilie en is een 3D-model (`public/models/uil.glb`, Meshy, textures verkleind).
 - Nieuwe meubels: kattenbed, bloempot, parasol, tafeltje. Eenmalig startpakket met een van elk meubel (behalve vuurtorentje). Kit Nugget slaapt in mand of bed.
 - Bouwtijd: verdienen met goede antwoorden (max 5 min), één keer verlengen met 5 goed op een rij (1:30), daarna eerst een hele ronde of proeftoets.
+
+### Wijzigingen 6 oktober (Roeland)
+- Uilie kan op de rug van Kit Nugget (Aankleden, Vriendjes). Ook de Regenboogknuffel.
+- Regenboogknuffel (`public/models/knuffel.glb`): bezoeker (komt met de boot), meubel (eenmalig cadeau via `profile.gifts`) en rijder.
+- Papa (Bedhead, `public/models/papa.glb`): alleen bezoeker, in de meeste rondes één keer, komt met een helikopter. Streng maar lief (`content/animals.ts`). Gescande kop op een lijfje uit code (`scene/visitors.ts`: handen in de zij, wijsvinger bij praten, armen omhoog als hij blij is). Goed antwoord bij Papa: dubbele blokken en dubbele bouwtijd, met een grote "x2 DUBBELE PUNTEN!" in beeld.
+- Papa's scan was 7,6 miljoen driehoeken (313 MB): `scripts/bake-glb-colors.mjs` bakt de texture in vertexkleuren en versimpelt naar ~33k (0,9 MB), zonder texture-naden. Gewone scans: `scripts/simplify-glb.mjs`.
+- 3D-dieren houden hun eigen maat en plek tijdens het animeren (bugfix in `animateWhole`).

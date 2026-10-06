@@ -17,7 +17,10 @@ export interface Rider {
 }
 
 /** Friends who can ride along on Kit Nugget's back. */
-export const RIDERS: Rider[] = [{ id: 'uil', naam: 'Uilie op je rug', unlock: { kind: 'rounds', at: 1 } }]
+export const RIDERS: Rider[] = [
+  { id: 'uil', naam: 'Uilie op je rug', unlock: { kind: 'rounds', at: 1 } },
+  { id: 'knuffel', naam: 'Regenboogknuffel op je rug', unlock: { kind: 'rounds', at: 1 } },
+]
 
 export function riderById(id: string | null | undefined): Rider | undefined {
   return id ? RIDERS.find((r) => r.id === id) : undefined

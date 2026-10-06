@@ -1,7 +1,7 @@
 /** Building blocks and furniture: what Viggo earns and places on the island. */
 
 export type BlockId = 'gras' | 'zand' | 'steen' | 'hout' | 'water' | 'bloemen'
-export type FurnitureId = 'mand' | 'bed' | 'krabpaal' | 'voerbak' | 'lantaarn' | 'bankje' | 'boompje' | 'hek' | 'bloempot' | 'parasol' | 'tafeltje' | 'vuurtoren'
+export type FurnitureId = 'mand' | 'bed' | 'knuffel' | 'krabpaal' | 'voerbak' | 'lantaarn' | 'bankje' | 'boompje' | 'hek' | 'bloempot' | 'parasol' | 'tafeltje' | 'vuurtoren'
 export type TreatId = 'vis'
 export type ItemId = BlockId | FurnitureId | TreatId
 
@@ -32,6 +32,7 @@ export const ITEMS: ItemInfo[] = [
   { id: 'boompje', naam: 'Boompje', kind: 'furniture', icon: '🌳', color: '#7cc47f', weight: 3 },
   { id: 'hek', naam: 'Hekje', kind: 'furniture', icon: '🚧', color: '#f4efe9', weight: 2 },
   { id: 'bed', naam: 'Kattenbed', kind: 'furniture', icon: '🛏️', color: '#f6b8d0', weight: 3 },
+  { id: 'knuffel', naam: 'Regenboogknuffel', kind: 'furniture', icon: '🌈', color: '#ffb36b', weight: 2 },
   { id: 'bloempot', naam: 'Bloempot', kind: 'furniture', icon: '🪴', color: '#e08a5f', weight: 2 },
   { id: 'parasol', naam: 'Parasol', kind: 'furniture', icon: '⛱️', color: '#ff9ec0', weight: 2 },
   { id: 'tafeltje', naam: 'Tafeltje', kind: 'furniture', icon: '🍵', color: '#f4efe9', weight: 2 },

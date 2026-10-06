@@ -12,3 +12,11 @@ node simplify-glb.mjs <invoer.glb> <project>/public/models/kit-nugget.glb 0.075 
 ```
 
 Argumenten: invoer, uitvoer, ratio (0.075 = 7,5% van de driehoeken), texturegrootte, en optioneel `normal`.
+
+## Hele zware scans (miljoenen driehoeken)
+
+Lukt `simplify-glb.mjs` niet onder de ~1 miljoen driehoeken (de texture is dan in heel veel stukjes geknipt), gebruik dan `bake-glb-colors.mjs`: die bakt de texture in de kleuren van de hoekpunten, voegt de naden samen en versimpelt daarna. Geen texture meer, dus ook geen naden.
+
+```bash
+node --max-old-space-size=14000 bake-glb-colors.mjs <invoer.glb> <project>/public/models/papa.glb 35000 0.05
+```

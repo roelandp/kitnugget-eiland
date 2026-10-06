@@ -197,6 +197,78 @@ export const ANIMALS: AnimalInfo[] = [
       'Bedankt! Ik kom weer langs.',
     ],
   },
+  {
+    id: 'knuffel',
+    naam: 'Regenboogknuffel',
+    ask: [
+      'Knuffeltijd! Maar eerst een vraagje, Kit Nugget.',
+      'Hoi hoi! Ik ben de Regenboogknuffel. Weet jij dit?',
+      'Ik ben zacht en vrolijk. Help je mij met een woord?',
+      'Regenboogje hier! Welk woord hoort hierbij?',
+    ],
+    askWord: [
+      'Hoi Kit Nugget! Wat betekent {woord}?',
+      'Ik ben maar een knuffel. Wat is {woord}?',
+      'Regenboogvraag: wat betekent {woord}?',
+      'Knuffel en vraag tegelijk: {woord}, wat is dat?',
+    ],
+    happy: [
+      'Jaaa! Dat verdient een regenboogknuffel!',
+      'Goed zo! Ik word er nog kleuriger van.',
+      'Helemaal goed! Knuffel!',
+      'Wauw, Kit Nugget! Jij bent slim.',
+      'Top! Alle kleuren van de regenboog voor jou.',
+    ],
+    learn: [
+      'Geeft niks. Nu weet je het, knuffel!',
+      'Kijk, zo zit het. Volgende keer lukt het vast.',
+      'Even goed kijken. Dan onthoud je het!',
+      'Zo leren we samen. Straks vraag ik het nog eens.',
+      'Nu ken je het woord. Dat is fijn!',
+    ],
+    bye: [
+      'Doei! Ik dobber weer weg.',
+      'Dank je wel, Kit Nugget! Knuffel!',
+      'Tot snel, regenboogvriend!',
+      'Ik ga weer. Blijf zo knap!',
+    ],
+  },
+  {
+    id: 'papa',
+    naam: 'Papa',
+    ask: [
+      'Zo. Papa is er. Opletten nu, Kit Nugget!',
+      'Hup, geen gekke dingen. Welk woord hoort hierbij?',
+      'Papa wil het goede antwoord zien. Goed nadenken!',
+      'Ik kom speciaal met de helikopter. Laat maar zien wat je kan!',
+    ],
+    askWord: [
+      'Zo. Wat betekent {woord}? Goed nadenken!',
+      'Opletten nu: wat is {woord}?',
+      'Papa wil het weten: wat betekent {woord}?',
+      'Geen gegok. Wat is {woord}?',
+    ],
+    happy: [
+      'Goed zo! Dat is dubbele punten waard!',
+      'Kijk eens aan! Papa is trots. Dubbele punten!',
+      'Helemaal goed. Dat verdient het dubbele!',
+      'Prima gedaan, Kit Nugget! Dubbel verdiend.',
+      'Zo doe je dat! Dubbele punten!',
+    ],
+    learn: [
+      'Hmm. Kijk nog eens goed, zo zit het.',
+      'Niet erg. Onthouden voor de volgende keer, hoor!',
+      'Zo, nu weet je het. Ik vraag het nog eens.',
+      'Goed kijken. Papa weet zeker dat je het straks wel weet.',
+      'Dit is het goede antwoord. Dat lukt de volgende keer!',
+    ],
+    bye: [
+      'Goed gewerkt. Papa vliegt weer verder!',
+      'Ik moet weer gaan. Blijf oefenen, hè!',
+      'Tot later. En niet te lang bouwen!',
+      'Dag Kit Nugget! Ik hou je in de gaten.',
+    ],
+  },
 ]
 
 export function animalById(id: AnimalId): AnimalInfo {

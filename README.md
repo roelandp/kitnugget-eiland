@@ -64,4 +64,5 @@ Optioneel: zet `public/models/kit-nugget.glb` neer (bijvoorbeeld een Tripo3D-sca
 ## Credits
 
 - Lettertype vragen: SchoolschriftLG, Bart Voorzanger & Liesbeth Flobbe (vrij voor niet-commercieel gebruik), syboor.eu/fonts/schoolschrift03/
-- Kit Nugget 3D: Meshy-model, versimpeld met `scripts/simplify-glb.mjs` (12.5k driehoeken, texture 1024).
+- Kit Nugget, Uilie en de Regenboogknuffel: Meshy-modellen, versimpeld met `scripts/simplify-glb.mjs` (texture 1024).
+- Papa (Bedhead): Meshy-model van 313 MB, met `scripts/bake-glb-colors.mjs` teruggebracht tot 0,9 MB (kleuren in de hoekpunten, geen texture).

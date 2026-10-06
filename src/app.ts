@@ -260,12 +260,17 @@ export class App {
     return n
   }
 
-  /** One of each piece of furniture, once, so the build bar has more than blocks from the start. */
+  /**
+   * One of each piece of furniture, once, so the build bar has more than blocks from the
+   * start. New kinds of furniture added later are handed out once as well.
+   */
   private giveStarterSet(): void {
-    if (this.store.profile.starterGiven) return
-    const set = FURNITURE.filter((f) => f.id !== 'vuurtoren').map((f) => f.id)
+    const given = new Set(this.store.profile.gifts)
+    const set = FURNITURE.filter((f) => f.id !== 'vuurtoren' && !given.has(f.id)).map((f) => f.id)
+    if (set.length === 0 && this.store.profile.starterGiven) return
     this.store.update((p) => {
       p.inventory = addItems(p.inventory, set)
+      p.gifts = [...p.gifts, ...set]
       p.starterGiven = true
     })
   }
