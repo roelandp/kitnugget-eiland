@@ -1513,3 +1513,23 @@ input {
     transform: translate(-50%, -60%) scale(1.1);
   }
 }
+
+/* Soft fades show there is more in the build bar. */
+.buildbar {
+  cursor: grab;
+}
+
+.buildbar.more-right {
+  -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+  mask-image: linear-gradient(90deg, #000 85%, transparent);
+}
+
+.buildbar.more-left {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 15%);
+  mask-image: linear-gradient(90deg, transparent, #000 15%);
+}
+
+.buildbar.more-left.more-right {
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}

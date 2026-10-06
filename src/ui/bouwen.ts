@@ -42,6 +42,7 @@ export function bouwenScreen(app: App): Screen {
   )
   const hint = el('p.note.build-hint')
   const bar = el('div.buildbar')
+  enableBarScrolling(bar)
   const sheet = el('div.card.sheet.build', {}, hint, bar)
   const root = el('div.screen', {}, top, el('div.spacer'), sheet)
   const unwatch = watchInsets(app, top, sheet)
@@ -291,4 +292,55 @@ export function bouwenScreen(app: App): Screen {
       window.removeEventListener('pointercancel', onUp)
     },
   }
+}
+
+/**
+ * Touch scrolls the bar natively. For a mouse: drag it sideways, or use the scroll
+ * wheel. A drag never counts as a tap on a slot. Soft fades at the edges show that
+ * there is more to scroll to.
+ */
+function enableBarScrolling(bar: HTMLElement): void {
+  let drag: { x: number; left: number; moved: boolean } | null = null
+  const edges = () => {
+    const max = bar.scrollWidth - bar.clientWidth
+    bar.classList.toggle('more-left', bar.scrollLeft > 4)
+    bar.classList.toggle('more-right', bar.scrollLeft < max - 4)
+  }
+  bar.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return
+    if ((e.target as HTMLElement).closest('.slot.fish')) return // the fish is dragged to Kit Nugget
+    drag = { x: e.clientX, left: bar.scrollLeft, moved: false }
+  })
+  window.addEventListener('pointermove', (e) => {
+    if (!drag) return
+    const dx = e.clientX - drag.x
+    if (Math.abs(dx) > 5) drag.moved = true
+    if (drag.moved) bar.scrollLeft = drag.left - dx
+  })
+  window.addEventListener('pointerup', () => {
+    if (!drag) return
+    const moved = drag.moved
+    drag = null
+    if (moved) {
+      // Swallow the click that follows a drag.
+      const stop = (ev: Event) => {
+        ev.stopPropagation()
+        ev.preventDefault()
+      }
+      bar.addEventListener('click', stop, { capture: true, once: true })
+      window.setTimeout(() => bar.removeEventListener('click', stop, { capture: true }), 0)
+    }
+  })
+  bar.addEventListener(
+    'wheel',
+    (e) => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return
+      e.preventDefault()
+      bar.scrollLeft += e.deltaY
+    },
+    { passive: false },
+  )
+  bar.addEventListener('scroll', edges, { passive: true })
+  new ResizeObserver(edges).observe(bar)
+  new MutationObserver(() => requestAnimationFrame(edges)).observe(bar, { childList: true })
 }
