@@ -13,18 +13,27 @@ describe('island growth', () => {
     expect(islandSize(5)).toEqual({ w: 5, d: 4, step: 1 })
     expect(islandSize(10)).toEqual({ w: 5, d: 5, step: 2 })
     expect(islandSize(40)).toEqual({ w: 8, d: 8, step: 8 })
-    expect(islandSize(1000).w).toBe(12)
+    expect(islandSize(1000).w).toBe(13)
+    expect(islandSize(40, 100)).toEqual({ w: 13, d: 13, step: 18 })
     expect(wordsToNextStep(7)).toBe(3)
     expect(earnsLighthouse(40, 40)).toBe(true)
     expect(earnsLighthouse(39, 40)).toBe(false)
   })
 
   it('fills the growth bar with learned words and half for almost learned ones', () => {
-    expect(growthProgress(0, 0)).toEqual({ fill: 0, toGo: 5 })
+    expect(growthProgress(0, 0)).toEqual({ fill: 0, toGo: 5, factsToGo: 10 })
     expect(growthProgress(0, 2).fill).toBeCloseTo(0.2)
     expect(growthProgress(3, 0).fill).toBeCloseTo(0.6)
     expect(growthProgress(4, 30).fill).toBeLessThan(1)
-    expect(growthProgress(7, 1)).toEqual({ fill: (2 + 0.5) / 5, toGo: 3 })
+    expect(growthProgress(7, 1)).toEqual({ fill: (2 + 0.5) / 5, toGo: 3, factsToGo: 6 })
+  })
+
+  it('counts automated facts too: 10 facts are one strip, like 5 words', () => {
+    expect(islandSize(0, 10)).toEqual({ w: 5, d: 4, step: 1 })
+    expect(islandSize(5, 10).step).toBe(2)
+    expect(islandSize(2, 6).step).toBe(1)
+    expect(growthProgress(0, 0, 4, 0)).toEqual({ fill: 0.4, toGo: 3, factsToGo: 6 })
+    expect(growthProgress(0, 0, 4, 2).fill).toBeCloseTo(0.5)
   })
 })
 

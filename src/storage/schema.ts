@@ -4,15 +4,22 @@ import { emptyDays, type Days } from '../game/day'
 import { CAP_SECONDS, START_SECONDS } from '../game/buildtime'
 import type { Inventory } from '../game/rewards'
 import { reviveState, type WordState } from '../engine/words'
+import { emptyTafelSnapshot, type DayStat, type TafelSnapshot } from '../engine/tafels/engine'
+import { ALL_TABLES, reviveFactState } from '../engine/tafels/facts'
 
 export const STORAGE_KEY = 'kitnugget-eiland.v1'
-export const SCHEMA_VERSION = 1
+/** 2: tafels (multiplication facts) next to the words. */
+export const SCHEMA_VERSION = 2
+
+/** What the game practises: words for the school test, or the times tables. */
+export type Vak = 'woorden' | 'tafels'
 
 export interface Settings {
   /** Chosen test id, or null for the newest. */
   toets: string | null
   sound: boolean
   speak: boolean
+  vak: Vak
 }
 
 export interface TestResult {
@@ -23,6 +30,31 @@ export interface TestResult {
   /** 1 to 10, one decimal. */
   grade: number
   wrong: { word: string; answer: string }[]
+}
+
+export interface TafelTestResult {
+  at: number
+  total: number
+  correct: number
+  /** Time for the whole test, in seconds. */
+  seconds: number
+  wrong: { sum: string; answer: number | null; right: number }[]
+}
+
+/** Everything about the times tables. */
+export interface Tafels {
+  engine: TafelSnapshot
+  /** Tables being practised. */
+  tables: number[]
+  tests: TafelTestResult[]
+  /** Progress from Kit Nugget Klimt was looked for once. */
+  klimtChecked: boolean
+  /** Tables that were fully automated once (and gave a present). */
+  tablesDone: number[]
+}
+
+export function emptyTafels(): Tafels {
+  return { engine: emptyTafelSnapshot(), tables: [...ALL_TABLES], tests: [], klimtChecked: false, tablesDone: [] }
 }
 
 export interface PlacedBlock {
@@ -55,6 +87,7 @@ export interface Profile {
   naam: string
   /** Learning state per test id and word. */
   words: Record<string, Record<string, WordState>>
+  tafels: Tafels
   island: Island
   inventory: Inventory
   look: Look
@@ -82,12 +115,13 @@ export function emptyProfile(naam = 'Viggo'): Profile {
   return {
     naam,
     words: {},
+    tafels: emptyTafels(),
     island: { blocks: [], seenStep: 0, lighthouses: [] },
     inventory: {},
     look: { hats: [], pattern: null, cape: null },
     days: emptyDays(),
     tests: [],
-    settings: { toets: null, sound: true, speak: true },
+    settings: { toets: null, sound: true, speak: true, vak: 'woorden' },
     stats: { rounds: 0, fed: 0, answers: 0 },
     buildTime: START_SECONDS,
     extensionUsed: false,
@@ -169,7 +203,9 @@ function migrateProfile(raw: unknown): Profile {
     toets: typeof s.toets === 'string' ? s.toets : null,
     sound: typeof s.sound === 'boolean' ? s.sound : true,
     speak: typeof s.speak === 'boolean' ? s.speak : true,
+    vak: s.vak === 'tafels' ? 'tafels' : 'woorden',
   }
+  p.tafels = migrateTafels(v.tafels)
   const stats = obj(v.stats)
   p.stats = { rounds: num(stats.rounds, 0), fed: num(stats.fed, 0), answers: num(stats.answers, 0) }
   p.buildTime = Math.max(0, Math.min(CAP_SECONDS, num(v.buildTime, START_SECONDS)))
@@ -181,6 +217,53 @@ function migrateProfile(raw: unknown): Profile {
   return p
 }
 
+function migrateTafels(raw: unknown): Tafels {
+  const t = emptyTafels()
+  const v = obj(raw)
+  const e = obj(v.engine)
+  for (const [key, state] of Object.entries(obj(e.states))) {
+    if (/^\d+x\d+$/.test(key)) t.engine.states[key] = reviveFactState(state)
+  }
+  if (Array.isArray(e.queue)) {
+    t.engine.queue = e.queue
+      .map((q) => obj(q))
+      .filter((q) => typeof q.key === 'string')
+      .map((q) => ({ key: q.key as string, dueTurn: num(q.dueTurn, 0) }))
+  }
+  t.engine.turn = num(e.turn, 0)
+  t.engine.lastKey = typeof e.lastKey === 'string' ? e.lastKey : null
+  t.engine.lastPairKey = typeof e.lastPairKey === 'string' ? e.lastPairKey : null
+  for (const [day, d] of Object.entries(obj(e.daily))) {
+    const x = obj(d)
+    const counts = Array.isArray(x.counts) && x.counts.length === 4 ? (x.counts.map((c) => num(c, 0)) as DayStat['counts']) : ([0, 0, 0, 0] as DayStat['counts'])
+    t.engine.daily[day] = { n: num(x.n, 0), right: num(x.right, 0), fast: num(x.fast, 0), rtSum: num(x.rtSum, 0), rtN: num(x.rtN, 0), counts }
+  }
+  if (Array.isArray(v.tables)) {
+    const tables = [...new Set(v.tables.filter((n): n is number => typeof n === 'number' && n >= 1 && n <= 10))].sort((a, b) => a - b)
+    if (tables.length > 0) t.tables = tables
+  }
+  if (Array.isArray(v.tests)) {
+    t.tests = v.tests
+      .map((x) => obj(x))
+      .map((x) => ({
+        at: num(x.at, 0),
+        total: num(x.total, 0),
+        correct: num(x.correct, 0),
+        seconds: num(x.seconds, 0),
+        wrong: Array.isArray(x.wrong)
+          ? x.wrong
+              .map((w) => obj(w))
+              .filter((w) => typeof w.sum === 'string')
+              .map((w) => ({ sum: w.sum as string, answer: typeof w.answer === 'number' ? w.answer : null, right: num(w.right, 0) }))
+          : [],
+      }))
+      .slice(-10)
+  }
+  t.klimtChecked = v.klimtChecked === true
+  t.tablesDone = Array.isArray(v.tablesDone) ? v.tablesDone.filter((n): n is number => typeof n === 'number') : []
+  return t
+}
+
 /** Brings older or partial saves up to the current shape. Never throws. */
 export function migrate(raw: unknown): SaveFile {
   const data = obj(raw)
@@ -189,7 +272,7 @@ export function migrate(raw: unknown): SaveFile {
     activeProfile: typeof data.activeProfile === 'string' ? data.activeProfile : 'viggo',
     profiles: {},
   }
-  // Future versions add their steps here, e.g. if (version < 2) { ... }.
+  // Version 1 had no tafels yet; migrateProfile fills them in empty.
   for (const [key, value] of Object.entries(obj(data.profiles))) out.profiles[key] = migrateProfile(value)
   if (!out.profiles[out.activeProfile]) out.profiles[out.activeProfile] = emptyProfile()
   return out

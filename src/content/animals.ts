@@ -8,6 +8,8 @@ export interface AnimalInfo {
   ask: string[]
   /** Greeting lines with `{woord}`, replaced by the word (or "dit woord"). Used when the word is shown. */
   askWord: string[]
+  /** Lines for a times-table sum, with `{som}` replaced by e.g. "7 x 8". */
+  askSom: string[]
   /** Lines when the answer is right. */
   happy: string[]
   /** Gentle lines after a wrong answer: never punishing, encouraging. */
@@ -30,6 +32,11 @@ export const ANIMALS: AnimalInfo[] = [
       'Hoi Kit Nugget! Wat betekent {woord} eigenlijk?',
       'Kwak kwak! Ik hoorde het woord {woord}. Wat is dat?',
       'Kit Nugget, kun jij mij {woord} uitleggen?',
+    ],
+    askSom: [
+      'Kwak! Hoi Kit Nugget! Hoeveel is {som}?',
+      'Kwak kwak! Ik tel mijn veren. Weet jij {som}?',
+      'Kwak! Help je mij even met {som}?',
     ],
     happy: [
       'Kwak! Helemaal goed!',
@@ -66,6 +73,11 @@ export const ANIMALS: AnimalInfo[] = [
       'Hoi Kit Nugget. Wat betekent {woord}?',
       'Ik dacht onderweg aan {woord}. Wat is dat ook alweer?',
       'Neem je tijd. Wat betekent {woord}?',
+    ],
+    askSom: [
+      'Rustig aan... hoeveel is {som}?',
+      'Neem je tijd, Kit Nugget. Wat is {som}?',
+      'Ik reken altijd langzaam. Weet jij {som}?',
     ],
     happy: [
       'Heel goed, Kit Nugget. Rustig en knap.',
@@ -104,6 +116,11 @@ export const ANIMALS: AnimalInfo[] = [
       'Oehoe, ik las {woord} in een boek. Wat is dat?',
       'Een wijze vraag: wat betekent {woord}?',
     ],
+    askSom: [
+      'Oehoe! Een rekenvraag van Uilie: {som}?',
+      'Oehoe, in mijn boek staat {som}. Wat is dat?',
+      'Kiekeboe! Weet jij hoeveel {som} is?',
+    ],
     happy: [
       'Oehoe! Dat is helemaal goed.',
       'Heel wijs, Kit Nugget!',
@@ -139,6 +156,11 @@ export const ANIMALS: AnimalInfo[] = [
       'Snel, snel! Weet jij wat {woord} betekent?',
       'Hup! Ik hoorde {woord}. Wat is dat?',
       'Hoi hoi! Kun jij mij {woord} uitleggen?',
+    ],
+    askSom: [
+      'Hop hop! Hoeveel is {som}?',
+      'Ik heb wortels geteld. Weet jij {som}?',
+      'Hoi Kit Nugget! Wat is {som}?',
     ],
     happy: [
       'Jaaa! Goed zo, Kit Nugget!',
@@ -176,6 +198,11 @@ export const ANIMALS: AnimalInfo[] = [
       'Kwaak kwaak, wat is {woord} eigenlijk?',
       'Ik hoorde {woord} bij de vijver. Wat is dat?',
     ],
+    askSom: [
+      'Kwaak! Hoeveel is {som}?',
+      'Ik ving vliegjes. Weet jij {som}?',
+      'Kwaak kwaak! Weet jij {som}?',
+    ],
     happy: [
       'Kwaak! Helemaal goed!',
       'Kwaak kwaak, wat goed van jou!',
@@ -212,6 +239,11 @@ export const ANIMALS: AnimalInfo[] = [
       'Regenboogvraag: wat betekent {woord}?',
       'Knuffel en vraag tegelijk: {woord}, wat is dat?',
     ],
+    askSom: [
+      'Regenboogvraag: hoeveel is {som}?',
+      'Hoi hoi! Weet jij {som}?',
+      'Knuffel en som tegelijk: {som}?',
+    ],
     happy: [
       'Jaaa! Dat verdient een regenboogknuffel!',
       'Goed zo! Ik word er nog kleuriger van.',
@@ -247,6 +279,11 @@ export const ANIMALS: AnimalInfo[] = [
       'Opletten nu: wat is {woord}?',
       'Papa wil het weten: wat betekent {woord}?',
       'Geen gegok. Wat is {woord}?',
+    ],
+    askSom: [
+      'Zo. Opletten nu: hoeveel is {som}?',
+      'Papa wil het weten: {som}?',
+      'Geen gegok. Wat is {som}?',
     ],
     happy: [
       'Goed zo! Dat is dubbele punten waard!',

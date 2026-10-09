@@ -10,11 +10,15 @@ import { islandSize, sizeForStep } from './game/island'
 import { turnTop } from './game/build'
 import { unlimited } from './game/buildtime'
 import { Store } from './storage/store'
+import type { Vak } from './storage/schema'
+import { TafelEngine } from './engine/tafels/engine'
+import { statusOf as factStatus } from './engine/tafels/facts'
+import { KLIMT_KEY, mergeKlimt, statesFromKlimt } from './engine/tafels/klimt'
 import { CatDresser, POSE_SPRITE } from './scene/dressup'
 import { sanitiseLook, type LookProgress } from './content/looks'
 import { clear, el } from './ui/dom'
 
-export type ScreenId = 'menu' | 'round' | 'result' | 'toets' | 'kaart' | 'instellingen' | 'bouwen' | 'aankleden'
+export type ScreenId = 'menu' | 'round' | 'sommen' | 'result' | 'toets' | 'tafeltoets' | 'kaart' | 'tafelkaart' | 'instellingen' | 'bouwen' | 'aankleden'
 
 export interface Screen {
   root: HTMLElement
@@ -117,6 +121,7 @@ export class App {
     this.scene = scene
     this.sceneKind = kind
     this.giveStarterSet()
+    this.importKlimt()
     this.dresser = new CatDresser(this.base)
     this.dresser.subscribe(() => this.pushLook())
     this.applyLook()
@@ -295,6 +300,94 @@ export class App {
     return toets.questions.filter((q) => words[q.word] && statusOf(words[q.word]) === 'geleerd').length
   }
 
+  // ---------- times tables ----------
+
+  /** Words or times tables: decides what Spelen, Proeftoets and the map do. */
+  get vak(): Vak {
+    return this.store.profile.settings.vak
+  }
+
+  setVak(vak: Vak): void {
+    this.store.update((p) => {
+      p.settings.vak = vak
+    })
+  }
+
+  /** The round screen for the chosen subject. */
+  get playScreen(): 'round' | 'sommen' {
+    return this.vak === 'tafels' ? 'sommen' : 'round'
+  }
+
+  makeTafelEngine(): TafelEngine {
+    const t = this.store.profile.tafels
+    return new TafelEngine({ tables: t.tables, snapshot: t.engine })
+  }
+
+  saveTafelEngine(engine: TafelEngine): void {
+    this.store.update((p) => {
+      p.tafels.engine = engine.snapshot()
+    })
+  }
+
+  /** Facts per status over all 100 facts, whatever tables are chosen now. For the island. */
+  factTotals(): { auto: number; quick: number } {
+    let auto = 0
+    let quick = 0
+    for (const s of Object.values(this.store.profile.tafels.engine.states)) {
+      const st = factStatus(s)
+      if (st === 'geautomatiseerd') auto++
+      else if (st === 'snel') quick++
+    }
+    return { auto, quick }
+  }
+
+  /**
+   * Kit Nugget Klimt runs on the same site, so its save can be read here. Once,
+   * facts Klimt already knew are taken over, so the times tables do not start
+   * from zero. (An installed app on an iPad has its own storage; then there is
+   * nothing to find, which is fine.)
+   */
+  private importKlimt(): void {
+    if (this.store.profile.tafels.klimtChecked) return
+    let imported = {}
+    try {
+      const raw = localStorage.getItem(KLIMT_KEY)
+      if (raw) imported = statesFromKlimt(JSON.parse(raw))
+    } catch {
+      // Unreadable: start fresh.
+    }
+    this.store.update((p) => {
+      const { states, taken } = mergeKlimt(p.tafels.engine.states, imported)
+      p.tafels.engine.states = states
+      p.tafels.klimtChecked = true
+      if (taken > 0) console.info(`${taken} sommen overgenomen uit Kit Nugget Klimt`)
+    })
+  }
+
+  /**
+   * A present for every table that is fully automated for the first time, and
+   * the lighthouse when all ten are. Returns the tables that were just finished.
+   */
+  tafelPresents(): { tables: number[]; lighthouse: boolean } {
+    const engine = new TafelEngine({ snapshot: this.store.profile.tafels.engine })
+    const done = new Set(this.store.profile.tafels.tablesDone)
+    const fresh = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter((t) => !done.has(t) && engine.tableDone(t))
+    const all = fresh.length > 0 && done.size + fresh.length === 10 && !this.store.profile.island.lighthouses.includes('tafels')
+    if (fresh.length === 0) return { tables: [], lighthouse: false }
+    const gifts = FURNITURE.filter((f) => f.id !== 'vuurtoren' && f.id !== 'knuffel')
+    this.store.update((p) => {
+      p.tafels.tablesDone = [...p.tafels.tablesDone, ...fresh].sort((a, b) => a - b)
+      const items: ItemId[] = []
+      for (const t of fresh) items.push(gifts[(t - 1) % gifts.length].id, 'vis', 'vis', 'vis')
+      if (all) {
+        items.push('vuurtoren')
+        p.island.lighthouses.push('tafels')
+      }
+      p.inventory = addItems(p.inventory, items)
+    })
+    return { tables: fresh, lighthouse: all }
+  }
+
   // ---------- island ----------
 
   /**
@@ -304,7 +397,7 @@ export class App {
    * Returns true when it grew just now.
    */
   syncIsland(animate: boolean): boolean {
-    const current = islandSize(this.learnedTotal()).step
+    const current = islandSize(this.learnedTotal(), this.factTotals().auto).step
     const seen = this.store.profile.island.seenStep
     const grew = animate && current > seen
     const size = sizeForStep(grew ? current : seen)
@@ -334,7 +427,8 @@ export class App {
 
   lookProgress(): LookProgress {
     const p = this.store.profile
-    return { learned: this.learnedTotal(), rounds: p.stats.rounds, days: p.days.played, fed: p.stats.fed }
+    // Automated facts count for outfits too: two facts weigh as one word.
+    return { learned: this.learnedTotal() + Math.floor(this.factTotals().auto / 2), rounds: p.stats.rounds, days: p.days.played, fed: p.stats.fed }
   }
 
   /** Applies the stored outfit (minus anything not unlocked) to the scene. */

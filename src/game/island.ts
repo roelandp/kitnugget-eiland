@@ -1,9 +1,16 @@
-/** How big the island is, from the number of learned words over all tests. */
+/**
+ * How big the island is. Learned words (over all tests) and automated times-table
+ * facts both count: 5 words or 10 facts make one strip of land.
+ */
 
 export const START_SIZE = 4
 export const WORDS_PER_STEP = 5
-/** 40 learned words: 8 steps, from 4x4 to 8x8. Words from more tests keep it growing a bit. */
-export const MAX_SIZE = 12
+export const FACTS_PER_STEP = 10
+/** Points per strip: a word is worth 2, a fact 1. */
+const POINTS_PER_STEP = 10
+const WORD_POINTS = POINTS_PER_STEP / WORDS_PER_STEP
+/** 40 learned words: 8 steps, from 4x4 to 8x8. All 100 facts add 10 more steps: 13x13. */
+export const MAX_SIZE = 13
 
 export interface IslandSize {
   w: number
@@ -12,9 +19,13 @@ export interface IslandSize {
   step: number
 }
 
-/** Every 5 learned words add a strip, alternating width and depth: 4x4, 5x4, 5x5, 6x5 ... */
-export function islandSize(learned: number): IslandSize {
-  return sizeForStep(Math.floor(learned / WORDS_PER_STEP))
+function points(words: number, facts: number): number {
+  return words * WORD_POINTS + facts
+}
+
+/** Every 5 learned words (or 10 automated facts) add a strip, alternating width and depth: 4x4, 5x4, 5x5, 6x5 ... */
+export function islandSize(learned: number, facts = 0): IslandSize {
+  return sizeForStep(Math.floor(points(learned, facts) / POINTS_PER_STEP))
 }
 
 export function sizeForStep(step: number): IslandSize {
@@ -25,15 +36,17 @@ export function sizeForStep(step: number): IslandSize {
 
 /**
  * How full the bar towards the next strip of land is. Learned words fill a
- * fifth each; words that are almost learned fill half of that, so progress
- * shows from the first rounds. The bar only reaches the end when the strip is
- * really earned.
+ * fifth each, automated facts a tenth; words that are almost learned and facts
+ * that are already quick fill half of that, so progress shows from the first
+ * rounds. The bar only reaches the end when the strip is really earned.
+ * `toGo` is in words, `factsToGo` in facts (either one finishes the strip).
  */
-export function growthProgress(learned: number, almost: number): { fill: number; toGo: number } {
-  const inStep = learned % WORDS_PER_STEP
-  const toGo = WORDS_PER_STEP - inStep
-  const fill = Math.min(0.95, (inStep + 0.5 * Math.min(almost, toGo)) / WORDS_PER_STEP)
-  return { fill, toGo }
+export function growthProgress(learned: number, almost: number, facts = 0, quick = 0): { fill: number; toGo: number; factsToGo: number } {
+  const inStep = points(learned, facts) % POINTS_PER_STEP
+  const left = POINTS_PER_STEP - inStep
+  const half = 0.5 * Math.min(points(almost, quick), left)
+  const fill = Math.min(0.95, (inStep + half) / POINTS_PER_STEP)
+  return { fill, toGo: Math.ceil(left / WORD_POINTS), factsToGo: left }
 }
 
 /** Words to go until the next growth step. */
