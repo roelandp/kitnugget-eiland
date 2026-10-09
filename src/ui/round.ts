@@ -16,6 +16,8 @@ import { el } from './dom'
 export const ROUND_LENGTH = 12
 
 export interface RoundResult {
+  /** Times tables instead of words: learned and weak then hold sums like "7 x 8". */
+  vak?: 'tafels'
   earned: ItemId[]
   /** Build time earned this round, in seconds. */
   seconds: number
@@ -30,6 +32,18 @@ const KIND_LABEL: Record<Pick['type'], string> = {
   reverse: 'Wat betekent dit woord?',
   sentence: 'Welk woord past in de zin?',
   type: 'Typ het woord dat hierbij hoort',
+}
+
+/** A big, happy "double points" moment when Papa gets a right answer. */
+export function doublePoints(app: App, root: HTMLElement): void {
+  const note = el('div.double', {}, el('div.double-x', { text: 'x2' }), el('div.double-text', { text: 'DUBBELE PUNTEN!' }), el('div.double-sub', { text: 'Papa is trots op je!' }))
+  root.appendChild(note)
+  app.audio.play('streak', 8)
+  window.setTimeout(() => app.audio.play('grow'), 250)
+  app.scene.burst('stars', 'animal')
+  app.scene.burst('sparkle', 'cat')
+  window.setTimeout(() => app.scene.burst('stars', 'cat'), 300)
+  window.setTimeout(() => note.remove(), 2400)
 }
 
 export function escapeHtml(s: string): string {
@@ -223,17 +237,7 @@ export function roundScreen(app: App, payload?: unknown): Screen {
   /** Papa flies in once in most rounds, somewhere in the middle. Never in the short unlock round. */
   const papaAt = !unlock && Math.random() < 0.85 ? 2 + Math.floor(Math.random() * Math.max(1, length - 3)) : -1
 
-  /** A big, happy "double points" moment. */
-  function showDouble(): void {
-    const note = el('div.double', {}, el('div.double-x', { text: 'x2' }), el('div.double-text', { text: 'DUBBELE PUNTEN!' }), el('div.double-sub', { text: 'Papa is trots op je!' }))
-    root.appendChild(note)
-    app.audio.play('streak', 8)
-    window.setTimeout(() => app.audio.play('grow'), 250)
-    app.scene.burst('stars', 'animal')
-    app.scene.burst('sparkle', 'cat')
-    window.setTimeout(() => app.scene.burst('stars', 'cat'), 300)
-    window.setTimeout(() => note.remove(), 2400)
-  }
+  const showDouble = () => doublePoints(app, root)
   /** Bumped per question, so a late arrival never acts on a newer question. */
   let seq = 0
   let answered = false

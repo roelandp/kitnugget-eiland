@@ -28,6 +28,12 @@
   --st-bijna: #cfeeb8;
   --st-geleerd: #7fcb92;
   --kb: 0px;
+  /* Times-table charts: validated for colour-blind separation on the card surface. */
+  --chart-nieuw: #ddd6e5;
+  --chart-oefenen: #e8893a;
+  --chart-snel: #8a76d4;
+  --chart-auto: #2f8f5b;
+  --chart-grid: #ece4d8;
   color-scheme: light;
 }
 
@@ -1532,4 +1538,596 @@ input {
 .buildbar.more-left.more-right {
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
   mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+/* ---------- times tables: a sum with a numpad ---------- */
+
+.som-sheet {
+  max-height: 86%;
+}
+
+.som-body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 700px) {
+  .som {
+    font-size: clamp(38px, 2.4vw + 22px, 60px);
+    gap: 10px;
+  }
+  .som-body {
+    grid-template-columns: 1fr minmax(260px, 340px);
+    align-items: center;
+    gap: 20px;
+  }
+}
+
+/* Short and wide (a phone on its side): sum left, keys right. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .som-sheet {
+    max-height: 92%;
+  }
+  .som-body {
+    grid-template-columns: 1fr minmax(220px, 300px);
+    align-items: center;
+  }
+  .numpad .key {
+    min-height: 44px;
+    font-size: 22px;
+  }
+}
+
+.som-left {
+  min-width: 0;
+}
+
+.som {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 4px 0 12px;
+  font-family: ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif;
+  font-size: clamp(38px, 4vw + 18px, 60px);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  white-space: nowrap;
+}
+
+.som-answer {
+  min-width: 2.4em;
+  padding: 0 12px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 0 0 3px var(--line) inset;
+  text-align: center;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.som-answer.empty {
+  color: var(--line);
+}
+
+.som-answer.again {
+  box-shadow: 0 0 0 3px var(--lila) inset;
+}
+
+.som-answer.good {
+  background: var(--good-soft);
+  box-shadow: 0 0 0 3px var(--good) inset;
+  color: var(--good-deep);
+}
+
+.som-help {
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.feedback.calm {
+  color: var(--lila-deep);
+  font-size: 18px;
+}
+
+.numpad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  transition: opacity 0.2s ease;
+}
+
+.numpad.resting {
+  opacity: 0.45;
+}
+
+.key {
+  min-height: 56px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 0 var(--line), 0 4px 14px rgba(61, 51, 80, 0.08);
+  font-family: ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif;
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+}
+
+.key:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--line);
+}
+
+.key.util {
+  background: var(--card-2);
+  font-size: 24px;
+}
+
+.key.ok {
+  background: var(--good);
+  box-shadow: 0 4px 0 var(--good-deep);
+  color: #fff;
+  font-size: 22px;
+}
+
+@media (max-height: 760px) and (max-width: 699px) {
+  .key {
+    min-height: 50px;
+  }
+  .som {
+    margin-bottom: 8px;
+  }
+}
+
+/* The steunsom: the route to the answer in small steps. */
+.steunsom {
+  text-align: center;
+}
+
+.steunsom .label {
+  margin-bottom: 6px;
+}
+
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  gap: 4px 8px;
+  font-family: ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif;
+  font-size: clamp(20px, 2vw + 12px, 28px);
+  font-weight: 900;
+}
+
+.steps .step {
+  opacity: 0;
+  animation: step-in 0.35s ease forwards;
+}
+
+.steps .step.final {
+  color: var(--good-deep);
+  background: var(--good-soft);
+  border-radius: 10px;
+  padding: 0 8px;
+}
+
+.steps .step.ask {
+  opacity: 1;
+  animation: none;
+  color: var(--lila-deep);
+}
+
+.steps .eq {
+  color: var(--ink-dim);
+}
+
+.steunsom .extra {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-dim);
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* The bonus fish and its splash. */
+.fish {
+  position: fixed;
+  z-index: 30;
+  font-size: 40px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 4px 4px rgba(61, 51, 80, 0.25));
+}
+
+.splash {
+  position: fixed;
+  z-index: 29;
+  width: 44px;
+  height: 14px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  pointer-events: none;
+  animation: splash 0.7s ease-out forwards;
+}
+
+@keyframes splash {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .steps .step {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* Words or times tables, at the top of the start screen. */
+.vak-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  margin: 0 0 12px;
+  border-radius: 999px;
+  background: var(--card-2);
+}
+
+.vak-switch button {
+  min-height: 44px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 17px;
+  color: var(--ink-dim);
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.vak-switch button.on {
+  background: #fff;
+  color: var(--ink);
+  box-shadow: 0 2px 8px var(--shadow);
+}
+
+/* ---------- Tafelkaart: charts and the 10 x 10 grid ---------- */
+
+.kaart-tabs {
+  margin-bottom: 14px;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 640px) {
+  .stat-tiles {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.stat-tile {
+  padding: 12px 14px;
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: 0 4px 16px rgba(61, 51, 80, 0.08);
+}
+
+.stat-label {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-dim);
+}
+
+.stat-value {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1.15;
+  color: var(--ink);
+}
+
+.stat-sub {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-dim);
+  line-height: 1.3;
+}
+
+.chart-card h2 {
+  margin-bottom: 2px;
+}
+
+.chart-sub {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-dim);
+  line-height: 1.35;
+}
+
+.chart {
+  position: relative;
+  width: 100%;
+  touch-action: pan-y;
+}
+
+.chart svg {
+  display: block;
+  overflow: visible;
+}
+
+.chart .grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.chart .tick,
+.chart .row-label {
+  font-size: 12px;
+  font-weight: 700;
+  fill: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart .row-label {
+  font-size: 14px;
+  fill: var(--ink);
+}
+
+.chart .value {
+  font-size: 13px;
+  font-weight: 900;
+  fill: var(--ink);
+}
+
+.chart .area {
+  stroke: var(--card);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.chart .line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.chart .dot {
+  stroke: var(--card);
+  stroke-width: 2;
+}
+
+.chart .ref {
+  stroke: var(--chart-auto);
+  stroke-width: 1;
+}
+
+.chart .ref-label {
+  font-size: 12px;
+  font-weight: 800;
+  fill: var(--ink-dim);
+}
+
+.chart .cross {
+  stroke: var(--ink-dim);
+  stroke-width: 1;
+  opacity: 0.5;
+}
+
+.chart .cross.hidden {
+  display: none;
+}
+
+.chart-tip {
+  position: absolute;
+  z-index: 3;
+  min-width: 150px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 6px 20px rgba(61, 51, 80, 0.2);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+.chart-tip b {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.chart-tip div {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-tip span {
+  margin-left: auto;
+  padding-left: 10px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.chart-tip i,
+.chart-legend i {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink-dim);
+}
+
+.chart-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chart-legend i.ring {
+  border-radius: 50%;
+  border: 2.5px solid;
+  background: transparent;
+}
+
+.grid-legend {
+  justify-content: center;
+}
+
+.grid-legend i {
+  width: 14px;
+  height: 14px;
+}
+
+/* The multiplication square: rows are tables, columns times 1 to 10. */
+.fact-grid {
+  display: grid;
+  grid-template-columns: repeat(11, 1fr);
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fact-grid .head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--ink-dim);
+  min-height: 24px;
+}
+
+.fact {
+  aspect-ratio: 1;
+  min-height: 28px;
+  border-radius: 8px;
+  font-size: clamp(11px, 1.6vw + 4px, 17px);
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fact.off {
+  opacity: 0.35;
+}
+
+.fs-nieuw {
+  background: var(--chart-nieuw);
+  color: var(--ink);
+}
+
+.fs-oefenen {
+  background: var(--chart-oefenen);
+  color: var(--ink);
+}
+
+.fs-snel {
+  background: var(--chart-snel);
+  color: #fff;
+}
+
+.fs-geautomatiseerd {
+  background: var(--chart-auto);
+  color: #fff;
+}
+
+.progress.many {
+  gap: 3px;
+  min-width: 0;
+}
+
+.progress.many i {
+  width: 8px;
+  height: 8px;
+}
+
+@media (max-width: 500px) {
+  .progress.many i {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+.steunsom.static .step {
+  opacity: 1;
+  animation: none;
+}
+
+.detail h2.som-title {
+  color: var(--ink);
+  font-family: ui-rounded, 'SF Pro Rounded', -apple-system, system-ui, sans-serif;
+  font-weight: 900;
+}
+
+.fact-detail .learn {
+  margin-top: 12px;
+}
+
+@media (min-width: 900px) {
+  .narrow.wide {
+    max-width: 900px;
+  }
+}
+
+.table-picks {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.table-picks button {
+  min-height: 52px;
+  border-radius: 14px;
+  background: var(--card-2);
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--ink-dim);
+}
+
+.table-picks button.on {
+  background: var(--good-soft);
+  color: var(--good-deep);
+  box-shadow: 0 0 0 3px var(--good) inset;
+}
+
+.toets-som .numpad {
+  margin-top: 6px;
 }

@@ -7,6 +7,9 @@ import { instellingenScreen } from './ui/instellingen'
 import { menuScreen } from './ui/menu'
 import { resultScreen } from './ui/result'
 import { roundScreen } from './ui/round'
+import { sommenScreen } from './ui/sommen'
+import { tafelkaartScreen } from './ui/tafelkaart'
+import { tafeltoetsScreen } from './ui/tafeltoets'
 import { toetsScreen } from './ui/toets'
 
 /**
@@ -96,6 +99,9 @@ function boot(): void {
   const app = new App(mount)
   app.register('menu', menuScreen)
   app.register('round', roundScreen)
+  app.register('sommen', sommenScreen)
+  app.register('tafeltoets', tafeltoetsScreen)
+  app.register('tafelkaart', tafelkaartScreen)
   app.register('result', resultScreen)
   app.register('toets', toetsScreen)
   app.register('kaart', kaartScreen)

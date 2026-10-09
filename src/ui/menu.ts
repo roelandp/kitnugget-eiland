@@ -11,8 +11,11 @@ export function menuScreen(app: App): Screen {
   const p = app.store.profile
   const toets = app.toets
   const now = Date.now()
+  const tafels = app.vak === 'tafels'
   const learned = app.learnedIn(toets)
   const total = toets.questions.length
+  const facts = tafels ? app.makeTafelEngine() : null
+  const factCounts = facts?.counts()
   const countdown = testCountdown(toets.date)
   const asleep = isAsleep(p.days, now)
   const tired = goalDone(p.days, now)
@@ -31,7 +34,7 @@ export function menuScreen(app: App): Screen {
       'div.menu-stats',
       {},
       el('span.chip', {}, paws(app), p.days.played > 0 ? ` dag ${p.days.played + (roundsToday(p.days, now) > 0 ? 0 : 1)}` : ''),
-      el('span.chip', { text: `⭐ ${learned} van ${total} geleerd` }),
+      el('span.chip', { text: facts && factCounts ? `⭐ ${factCounts.geautomatiseerd} van ${facts.facts.length} sommen` : `⭐ ${learned} van ${total} geleerd` }),
       inventoryChip(p.inventory),
     ),
   )
@@ -42,29 +45,47 @@ export function menuScreen(app: App): Screen {
   } else if (tired) {
     lines.push(el('p.note', { html: '<strong>Kit Nugget is moe en tevreden. Morgen weer!</strong> Nog een rondje mag ook.' }))
   }
-  const info = [toets.title.replace(/^Toets \d+ \w+: /, ''), formatDate(toets.date) && `toets ${formatDate(toets.date)}`].filter(Boolean).join(' · ')
-  lines.push(el('p.note', { html: `<strong>${countdown ?? info}</strong>${countdown ? '<br>' + info : ''}` }))
-  lines.push(growthBar(app))
-  const left = daysUntil(toets.date)
-  if (left !== null && left >= 0 && left <= 3 && learned < total) {
-    lines.push(el('p.note', { text: 'Tip: doe ook eens de proeftoets, dan komen alle woorden langs.' }))
+  if (facts && factCounts) {
+    const t = app.store.profile.tafels.tables
+    const which = t.length === 10 ? 'Alle tafels' : `De tafels van ${t.join(', ').replace(/, (\d+)$/, ' en $1')}`
+    lines.push(
+      el('p.note', {
+        html: `<strong>${which}</strong><br>${factCounts.geautomatiseerd} sommen zitten erin, ${factCounts.snel} gaan goed, ${factCounts.oefenen} oefen je nog`,
+      }),
+    )
+    lines.push(growthBar(app))
+  } else {
+    const info = [toets.title.replace(/^Toets \d+ \w+: /, ''), formatDate(toets.date) && `toets ${formatDate(toets.date)}`].filter(Boolean).join(' · ')
+    lines.push(el('p.note', { html: `<strong>${countdown ?? info}</strong>${countdown ? '<br>' + info : ''}` }))
+    lines.push(growthBar(app))
+    const left = daysUntil(toets.date)
+    if (left !== null && left >= 0 && left <= 3 && learned < total) {
+      lines.push(el('p.note', { text: 'Tip: doe ook eens de proeftoets, dan komen alle woorden langs.' }))
+    }
+    const older = TOETSEN.filter((t) => t.id !== toets.id)
+    if (older.length > 0) {
+      lines.push(el('p.note.older', { text: `Andere toetsen: ${older.map((t) => t.title.replace(/:.*/, '')).join(', ')} (kies in Instellingen)` }))
+    }
   }
-  const older = TOETSEN.filter((t) => t.id !== toets.id)
-  if (older.length > 0) {
-    lines.push(el('p.note.older', { text: `Andere toetsen: ${older.map((t) => t.title.replace(/:.*/, '')).join(', ')} (kies in Instellingen)` }))
-  }
+
+  const vakSwitch = el(
+    'div.vak-switch',
+    { role: 'tablist' },
+    el(`button${tafels ? '' : '.on'}`, { role: 'tab', 'aria-selected': String(!tafels), onclick: () => switchTo('woorden') }, '📚 Woordjes'),
+    el(`button${tafels ? '.on' : ''}`, { role: 'tab', 'aria-selected': String(tafels), onclick: () => switchTo('tafels') }, '✖️ Tafels'),
+  )
 
   const panel = el(
     'div.menu-panel',
     {},
-    el('button.btn.primary', { onclick: () => start() }, '▶  Spelen'),
+    el('button.btn.primary', { onclick: () => start() }, tafels ? '▶  Sommen oefenen' : '▶  Spelen'),
     el('button.btn', { onclick: () => app.go('bouwen') }, '🧱 Bouwen', app.buildUnlimited() ? null : el('span.time-badge', { text: clock(p.buildTime) })),
-    el('button.btn', { onclick: () => app.go('toets') }, '📝 Proeftoets'),
-    el('button.btn', { onclick: () => app.go('kaart') }, '🗺️ Woordenkaart'),
+    el('button.btn', { onclick: () => app.go(tafels ? 'tafeltoets' : 'toets') }, '📝 Proeftoets'),
+    el('button.btn', { onclick: () => app.go(tafels ? 'tafelkaart' : 'kaart') }, tafels ? '📈 Tafelkaart' : '🗺️ Woordenkaart'),
     el('button.btn', { onclick: () => app.go('aankleden') }, '👒 Aankleden'),
     el('button.btn.settings-btn', { onclick: () => app.go('instellingen') }, '⚙️ Instellingen'),
   )
-  const sheet = el('div.card.sheet', {}, el('div.sheet-scroll', {}, ...lines, panel))
+  const sheet = el('div.card.sheet', {}, el('div.sheet-scroll', {}, vakSwitch, ...lines, panel))
 
   let awake = !asleep
   const catcher = el('div.tap-catcher', {
@@ -85,7 +106,14 @@ export function menuScreen(app: App): Screen {
 
   function start(): void {
     app.audio.play('start')
-    app.go('round')
+    app.go(app.playScreen)
+  }
+
+  function switchTo(vak: 'woorden' | 'tafels'): void {
+    if (app.vak === vak) return
+    app.audio.play('tap')
+    app.setVak(vak)
+    app.go('menu')
   }
 
   const unwatch = watchInsets(app, top, sheet)

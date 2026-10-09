@@ -37,8 +37,9 @@ export function resultScreen(app: App, payload?: unknown): Screen {
     lootList(countItems(r.earned as ItemId[])),
     el('p.note', { html: app.buildUnlimited() ? '<strong>Alle woorden geleerd: bouwen mag zo lang je wilt!</strong>' : `⏳ <strong>+${clock(r.seconds ?? 0)}</strong> bouwtijd. Je hebt nu <strong>${clock(app.store.profile.buildTime)}</strong> om te bouwen.` }),
   ]
+  const tafels = r.vak === 'tafels'
   if (r.learned.length > 0) {
-    parts.push(el('div.section-label', { text: 'Nieuw geleerd' }), el('div.wordlist', {}, ...r.learned.map((w) => el('span', { text: w }))))
+    parts.push(el('div.section-label', { text: tafels ? 'Zitten er nu goed in' : 'Nieuw geleerd' }), el('div.wordlist', {}, ...r.learned.map((w) => el('span', { text: w }))))
   }
   if (r.weak.length > 0) {
     parts.push(el('div.section-label', { text: 'Nog even oefenen' }), el('div.wordlist.weak', {}, ...r.weak.map((w) => el('span', { text: w }))))
@@ -50,7 +51,7 @@ export function resultScreen(app: App, payload?: unknown): Screen {
     'div.row',
     {},
     el('button.btn.primary', { onclick: () => app.go('bouwen') }, '🧱 Bouwen'),
-    el('button.btn', { onclick: () => app.go('round') }, 'Nog een ronde'),
+    el('button.btn', { onclick: () => app.go(tafels ? 'sommen' : 'round') }, 'Nog een ronde'),
   )
   const sheet = el('div.card.sheet.result', {}, el('div.sheet-scroll', {}, ...parts, buttons, el('button.btn.small.ghost', { style: { width: '100%', marginTop: '10px' }, onclick: () => app.go('menu') }, 'Naar het begin')))
   const root = el('div.screen', {}, el('div.spacer'), sheet)
@@ -59,6 +60,7 @@ export function resultScreen(app: App, payload?: unknown): Screen {
   // Growth and the sunset come a moment later, so they are noticed.
   let fired = false
   let lighthouseTimer = 0
+  let presentTimer = 0
   const timer = window.setTimeout(() => {
     fired = true
     if (app.syncIsland(true)) {
@@ -67,6 +69,15 @@ export function resultScreen(app: App, payload?: unknown): Screen {
     }
     if (checkLighthouse(app)) {
       lighthouseTimer = window.setTimeout(() => app.toast('Alle woorden geleerd! Je krijgt een vuurtorentje!'), 2800)
+    }
+    const presents = app.tafelPresents()
+    if (presents.tables.length > 0) {
+      const names = presents.tables.map((t) => `${t}`).join(' en ')
+      presentTimer = window.setTimeout(() => {
+        app.audio.play('streak', 8)
+        app.toast(`De tafel van ${names} zit erin! Een cadeautje voor het eiland en vissnoepjes!`)
+        if (presents.lighthouse) window.setTimeout(() => app.toast('Alle tafels zitten erin! Je krijgt een vuurtorentje!'), 2800)
+      }, 1400)
     }
     if (tired) app.scene.setMood('sunset')
     app.scene.catPose('idle')
@@ -77,8 +88,12 @@ export function resultScreen(app: App, payload?: unknown): Screen {
     dispose: () => {
       window.clearTimeout(timer)
       window.clearTimeout(lighthouseTimer)
+      window.clearTimeout(presentTimer)
       // Left quickly: still hand out what was earned, just without the show.
-      if (!fired) checkLighthouse(app)
+      if (!fired) {
+        checkLighthouse(app)
+        app.tafelPresents()
+      }
       unwatch()
     },
   }

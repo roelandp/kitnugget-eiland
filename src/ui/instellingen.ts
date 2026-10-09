@@ -42,12 +42,35 @@ export function instellingenScreen(app: App): Screen {
   }
   renderList()
 
+  // Times tables to practise: all by default, at least one.
+  const tableRow = el('div.table-picks')
+  const renderTables = () => {
+    const chosen = new Set(app.store.profile.tafels.tables)
+    tableRow.replaceChildren(
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) =>
+        el(`button${chosen.has(n) ? '.on' : ''}`, { 'aria-pressed': String(chosen.has(n)), onclick: () => flip(n) }, String(n)),
+      ),
+    )
+  }
+  const flip = (n: number) => {
+    const chosen = new Set(app.store.profile.tafels.tables)
+    if (chosen.has(n)) {
+      if (chosen.size === 1) return
+      chosen.delete(n)
+    } else chosen.add(n)
+    app.store.update((pp) => {
+      pp.tafels.tables = [...chosen].sort((a, b) => a - b)
+    })
+    renderTables()
+  }
+  renderTables()
+
   const confirmBox = el('div.danger-zone')
   const renderReset = (asking: boolean) => {
     confirmBox.replaceChildren(
       ...(asking
         ? [
-            el('p', { html: '<strong>Weet je het zeker?</strong> Alle woorden, blokken, het eiland en de proeftoetsen van Viggo worden gewist.' }),
+            el('p', { html: '<strong>Weet je het zeker?</strong> Alle woorden, tafels, blokken, het eiland en de proeftoetsen van Viggo worden gewist.' }),
             el(
               'div.row',
               {},
@@ -90,6 +113,13 @@ export function instellingenScreen(app: App): Screen {
       'div.narrow',
       {},
       el('div.card.panel', {}, el('h2', { text: 'Welke toets oefen je?' }), list),
+      el(
+        'div.card.panel',
+        {},
+        el('h2', { text: 'Welke tafels oefen je?' }),
+        el('p.tiny', { text: 'Standaard alle tafels. Wat al geleerd is blijft bewaard, ook als je een tafel uitzet.' }),
+        tableRow,
+      ),
       el('div.card.panel', {}, soundRow),
       el('div.card.panel', {}, el('h2', { text: 'Opnieuw beginnen' }), confirmBox),
       el('p.tiny', { text: `Versie ${__BUILD_ID__.slice(0, 16).replace('T', ' ')} · Kit Nugget: ${app.sceneKind}` }),

@@ -80,18 +80,30 @@ export function lootList(items: { id: ItemId; n: number }[]): HTMLElement {
   return wrap
 }
 
-/** A bar towards the next strip of land, with what it takes in words. */
+/** A bar towards the next strip of land, with what it takes in words or sums (whichever is being practised). */
 export function growthBar(app: App): HTMLElement {
   const learned = app.learnedTotal()
   const almost = app.almostTotal()
-  const { fill, toGo } = growthProgress(learned, almost)
+  const facts = app.factTotals()
+  const { fill, toGo, factsToGo } = growthProgress(learned, almost, facts.auto, facts.quick)
+  const tafels = app.vak === 'tafels'
+  const label = tafels
+    ? `Nog ${factsToGo} ${factsToGo === 1 ? 'som' : 'sommen'} goed leren, dan groeit het eiland`
+    : `Nog ${toGo} ${toGo === 1 ? 'woord' : 'woorden'} echt leren, dan groeit het eiland`
+  const sub = tafels
+    ? facts.quick > 0
+      ? `${facts.quick} ${facts.quick === 1 ? 'som gaat' : 'sommen gaan'} al goed. Blijf oefenen, dan zitten ze er zo in!`
+      : null
+    : almost > 0
+      ? `${almost} ${almost === 1 ? 'woord is' : 'woorden zijn'} bijna geleerd. Doe ze straks nog eens goed!`
+      : null
   const fillEl = el('div.grow-fill')
   const bar = el(
     'div.grow',
     {},
-    el('div.grow-label', {}, el('span', { text: '🏝️' }), el('span', { text: `Nog ${toGo} ${toGo === 1 ? 'woord' : 'woorden'} echt leren, dan groeit het eiland` })),
+    el('div.grow-label', {}, el('span', { text: '🏝️' }), el('span', { text: label })),
     el('div.grow-track', {}, fillEl),
-    almost > 0 ? el('div.grow-sub', { text: `${almost} ${almost === 1 ? 'woord is' : 'woorden zijn'} bijna geleerd. Doe ze straks nog eens goed!` }) : null,
+    sub ? el('div.grow-sub', { text: sub }) : null,
   )
   // Grow into place, so a change after a round is visible.
   requestAnimationFrame(() => requestAnimationFrame(() => (fillEl.style.width = `${Math.round(fill * 100)}%`)))

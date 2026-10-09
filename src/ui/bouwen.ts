@@ -252,12 +252,12 @@ export function bouwenScreen(app: App): Screen {
       el('div.lock-icon', { text: '⏳' }),
       el('h2', { text: 'De bouwtijd is op!' }),
       canExtend
-        ? el('p', { text: `Doe ${UNLOCK_RIGHT} woorden goed op een rij en je mag nog ${clock(EXTENSION_SECONDS)} verder bouwen.` })
+        ? el('p', { text: `Doe ${UNLOCK_RIGHT} ${app.vak === 'tafels' ? 'sommen' : 'woorden'} goed op een rij en je mag nog ${clock(EXTENSION_SECONDS)} verder bouwen.` })
         : el('p', { text: 'Je hebt al een keer verlengd. Speel een hele ronde, dan verdien je nieuwe bouwtijd.' }),
       canExtend
-        ? el('button.btn.primary', { style: { width: '100%' }, onclick: () => app.go('round', { unlock: true }) }, `${UNLOCK_RIGHT} goed op een rij`)
+        ? el('button.btn.primary', { style: { width: '100%' }, onclick: () => app.go(app.playScreen, { unlock: true }) }, `${UNLOCK_RIGHT} goed op een rij`)
         : null,
-      el(`button.btn${canExtend ? '' : '.primary'}`, { style: { width: '100%', marginTop: '10px' }, onclick: () => app.go('round') }, '▶ Speel een hele ronde'),
+      el(`button.btn${canExtend ? '' : '.primary'}`, { style: { width: '100%', marginTop: '10px' }, onclick: () => app.go(app.playScreen) }, '▶ Speel een hele ronde'),
       el('button.btn.small.ghost', { style: { width: '100%', marginTop: '10px' }, onclick: () => app.go('menu') }, 'Naar het begin'),
     )
     root.appendChild(el('div.overlay', {}, card))

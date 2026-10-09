@@ -229,3 +229,15 @@ Fase 1 t/m 3 zijn gebouwd, fase 4 en 5 getest. Implementatienotities:
 - Papa (Bedhead, `public/models/papa.glb`): alleen bezoeker, in de meeste rondes één keer, komt met een helikopter. Streng maar lief (`content/animals.ts`). Gescande kop op een lijfje uit code (`scene/visitors.ts`: handen in de zij, wijsvinger bij praten, armen omhoog als hij blij is). Goed antwoord bij Papa: dubbele blokken en dubbele bouwtijd, met een grote "x2 DUBBELE PUNTEN!" in beeld.
 - Papa's scan was 7,6 miljoen driehoeken (313 MB): `scripts/bake-glb-colors.mjs` bakt de texture in vertexkleuren en versimpelt naar ~33k (0,9 MB), zonder texture-naden. Gewone scans: `scripts/simplify-glb.mjs`.
 - 3D-dieren houden hun eigen maat en plek tijdens het animeren (bugfix in `animateWhole`).
+
+### Wijzigingen 9 oktober: tafels op het eiland (Roeland)
+- Tweede vak naast de woordjes: schakelaar Woordjes / Tafels bovenaan het startscherm (`settings.vak`). Spelen, Proeftoets en de kaart volgen het vak; de bouwtijd, beloningen, het dagdoel en het eiland zijn gedeeld.
+- Alle tafels 1 t/m 10 (100 sommen), te beperken in Instellingen. Engine in `src/engine/tafels/` (uit Klimt): status `nieuw`, `oefenen`, `snel` (in de UI "Gaat goed"), `geautomatiseerd` ("Zit erin") = 3 keer op rij goed binnen 3 s, op 2 verschillende dagen. Nieuwe sommen komen met een paar tegelijk binnen (makkelijkste ankers eerst), fout of met hulp komt binnen 3 beurten terug, 7x8 en 8x7 beïnvloeden elkaar.
+- Geen tijdsdruk in beeld en geen meerkeuze (niet gokken): typen op een numpad dat zelf bevestigt. De reactietijd wordt alleen op de achtergrond gemeten (tijd met de app op de achtergrond telt niet). Twee keer heel snel fout: "Rustig aan" en het numpad pauzeert even.
+- Fout: steunsom stap voor stap (`content/steunsom.ts`, uit Klimt), daarna het goede antwoord typen. Knop "Hulp" toont de steunsom zonder antwoord; goed met hulp telt als goed maar niet voor snelheid.
+- Visje: soms springt een vis over het eiland; antwoord je goed voor hij in het water plonst, dan vangt Kit Nugget hem (extra vissnoepje). Puur bonus.
+- Ronde: 15 sommen. Een blok per goed antwoord, Papa dubbel. Per tafel die er helemaal in zit een meubel en 3 vissnoepjes; alle tien: vuurtorentje (`lighthouses` bevat `'tafels'`).
+- Eilandgroei: een strook per 5 geleerde woorden of 10 geautomatiseerde sommen (punten), max 13x13.
+- Tafelkaart (`ui/tafelkaart.ts`, grafieken in `ui/charts.ts`, eigen SVG): tegels, "Zo groeit het" (sommen per status per dag), "Hoe snel" (gemiddelde tijd per dag met 3 s-lijn), per tafel, proeftoetsen; tabblad met het 10x10-veld en per som een detail met elke poging (tijd en uitkomst). Per som wordt een log van de laatste 40 antwoorden bewaard, per dag een samenvatting (`daily`).
+- Proeftoets tafels: 20 of 40 sommen, geen klok in beeld, aan het eind score en tijd per som.
+- Opslag schema 2: `profile.tafels` (engine, tables, tests, tablesDone). Bij de eerste start wordt de voortgang uit Kit Nugget Klimt (`kitnugget.v1`, zelfde site) eenmalig overgenomen; een als app geïnstalleerde versie op de iPad heeft eigen opslag en vindt dan niets.
